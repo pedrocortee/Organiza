@@ -1,0 +1,1670 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Organiza — Dashboard</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+  <style>
+    :root {
+      --bg:             #151C24;
+      --surface:        #1a2332;
+      --surface2:       #1f2b3d;
+      --border:         rgba(105,205,90,0.12);
+      --green:          #69CD5A;
+      --lime:           #D6F04F;
+      --white:          #FFFFFF;
+      --muted:          rgba(255,255,255,0.45);
+      --quente:         #FF4D4D;
+      --morno:          #FF9500;
+      --frio:           #4D9EFF;
+      --sidebar-bg:     #111820;
+      --nav-hover-bg:   rgba(255,255,255,0.04);
+      --delta-flat-bg:  rgba(255,255,255,0.06);
+      --disabled-bg:    rgba(255,255,255,0.04);
+      --disabled-color: rgba(255,255,255,0.2);
+      --disabled-bdr:   rgba(255,255,255,0.08);
+    }
+    @media (prefers-color-scheme: light) {
+      :root {
+        --bg:             #f0f2f5;
+        --surface:        #ffffff;
+        --surface2:       #f3f6f9;
+        --border:         rgba(0,0,0,0.08);
+        --green:          #1a9d44;
+        --lime:           #6b8000;
+        --white:          #111827;
+        --muted:          rgba(0,0,0,0.45);
+        --quente:         #cc2222;
+        --morno:          #c46800;
+        --frio:           #1a6fd4;
+        --sidebar-bg:     #ffffff;
+        --nav-hover-bg:   rgba(0,0,0,0.04);
+        --delta-flat-bg:  rgba(0,0,0,0.06);
+        --disabled-bg:    rgba(0,0,0,0.04);
+        --disabled-color: rgba(0,0,0,0.25);
+        --disabled-bdr:   rgba(0,0,0,0.1);
+      }
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--white); min-height: 100vh; display: flex; }
+
+    /* ── Sidebar ─────────────────────────────────────────────── */
+    .sidebar {
+      width: 210px; flex-shrink: 0;
+      background: var(--sidebar-bg);
+      border-right: 1px solid var(--border);
+      display: flex; flex-direction: column;
+      padding: 28px 0;
+      position: fixed; top: 0; left: 0; bottom: 0;
+    }
+    .logo { padding: 0 20px 24px; border-bottom: 1px solid var(--border); margin-bottom: 16px; }
+    .logo-name { font-size: 22px; font-weight: 700; color: var(--white); }
+    .logo-name .g { color: var(--green); }
+    .logo-name .d { color: var(--lime); }
+    .logo-tagline { font-size: 10px; color: var(--muted); margin-top: 3px; letter-spacing: .3px; }
+
+    .nav-item {
+      display: flex; align-items: center; gap: 10px;
+      padding: 11px 20px; font-size: 13px; color: var(--muted);
+      cursor: pointer; border-left: 2px solid transparent;
+      transition: all .15s;
+    }
+    .nav-item.active { color: var(--green); background: rgba(105,205,90,0.08); border-left-color: var(--green); }
+    .nav-item:hover:not(.active) { color: var(--white); background: var(--nav-hover-bg); }
+    .nav-item .nav-icon { font-size: 15px; flex-shrink: 0; }
+
+    .nav-badge {
+      margin-left: auto;
+      background: var(--quente);
+      color: #fff;
+      font-size: 10px; font-weight: 700;
+      padding: 1px 6px; border-radius: 20px;
+      min-width: 18px; text-align: center;
+      transition: all .2s;
+    }
+    .nav-badge.zero { background: var(--delta-flat-bg); color: var(--muted); }
+
+    .sidebar-footer { padding: 16px 20px; border-top: 1px solid var(--border); margin-top: auto; }
+    .user-label { font-size: 11px; color: var(--muted); }
+    .user-id { font-size: 11px; color: var(--green); margin-top: 2px; word-break: break-all; }
+    .status-row { display: flex; align-items: center; gap: 6px; margin-top: 8px; font-size: 11px; color: var(--muted); }
+    .status-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--green); animation: pulse 2s infinite; flex-shrink: 0; }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.3} }
+    .loading-bar { height: 2px; background: linear-gradient(90deg,var(--green),var(--lime),var(--green)); background-size: 200%; animation: load 1.5s infinite; border-radius: 2px; margin-top: 6px; display: none; }
+    .loading-bar.on { display: block; }
+    @keyframes load { 0%{background-position:200%} 100%{background-position:-200%} }
+
+    /* ── Main ────────────────────────────────────────────────── */
+    .main { margin-left: 210px; flex: 1; padding: 32px 36px; max-width: 1400px; }
+
+    /* ── Topbar ──────────────────────────────────────────────── */
+    .topbar { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 28px; }
+    .page-title { font-size: 22px; font-weight: 700; }
+    .page-title span { color: var(--green); }
+    .page-sub { font-size: 12px; color: var(--muted); margin-top: 4px; }
+    .btn-refresh { padding: 7px 16px; background: transparent; border: 1px solid var(--border); border-radius: 8px; color: var(--muted); font-size: 12px; cursor: pointer; font-family: 'Inter', sans-serif; transition: all .2s; }
+    .btn-refresh:hover { border-color: var(--green); color: var(--green); }
+
+    /* ── Filtro de período (dentro de Performance) ───────────── */
+    .perf-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px; padding: 14px 18px; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; }
+    .perf-header-label { font-size: 12px; color: var(--muted); }
+    .period-tabs { display: flex; background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 3px; gap: 2px; }
+    .period-tab { padding: 5px 14px; border-radius: 6px; font-size: 12px; font-weight: 500; cursor: pointer; color: var(--muted); border: none; background: transparent; font-family: 'Inter', sans-serif; transition: all .15s; }
+    .period-tab.active { background: var(--green); color: #000; font-weight: 700; }
+    .period-tab:hover:not(.active) { color: var(--white); }
+
+    /* ── Section labels ──────────────────────────────────────── */
+    .section-label { font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
+    .section-label::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+    .section-sub { font-size: 12px; color: var(--muted); margin-bottom: 12px; }
+    .section-sub strong { color: var(--white); }
+
+    /* ── Grids ───────────────────────────────────────────────── */
+    .grid-4 { display: grid; grid-template-columns: repeat(4,1fr); gap: 12px; margin-bottom: 24px; }
+    .grid-3 { display: grid; grid-template-columns: repeat(3,1fr); gap: 12px; margin-bottom: 24px; }
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 24px; }
+    .grid-5 { display: grid; grid-template-columns: repeat(5,1fr); gap: 12px; margin-bottom: 24px; }
+
+    /* ── Cards ───────────────────────────────────────────────── */
+    .card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 20px; transition: border-color .2s, transform .2s; }
+    .card:hover { border-color: rgba(105,205,90,0.25); transform: translateY(-1px); }
+    .card.alerta { border-color: rgba(255,77,77,0.3); }
+    .card.alerta:hover { border-color: rgba(255,77,77,0.55); }
+    .card-label { font-size: 11px; font-weight: 500; color: var(--muted); text-transform: uppercase; letter-spacing: .8px; margin-bottom: 10px; display: flex; align-items: center; gap: 6px; }
+    .card-value { font-size: 36px; font-weight: 700; line-height: 1; margin-bottom: 6px; }
+    .card-value.g  { color: var(--green); }
+    .card-value.l  { color: var(--lime); }
+    .card-value.q  { color: var(--quente); }
+    .card-value.m  { color: var(--morno); }
+    .card-value.f  { color: var(--frio); }
+    .card-sub { font-size: 12px; color: var(--muted); }
+
+    /* ── Delta badges ────────────────────────────────────────── */
+    .card-delta { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; font-weight: 600; padding: 2px 7px; border-radius: 20px; margin-top: 6px; }
+    .card-delta.up   { background: rgba(105,205,90,0.12); color: var(--green); }
+    .card-delta.down { background: rgba(255,77,77,0.12);  color: var(--quente); }
+    .card-delta.flat { background: var(--delta-flat-bg);  color: var(--muted); }
+
+    /* ── Dots ────────────────────────────────────────────────── */
+    .dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; flex-shrink: 0; }
+    .dot.q  { background: var(--quente); box-shadow: 0 0 5px var(--quente); }
+    .dot.m  { background: var(--morno);  box-shadow: 0 0 5px var(--morno); }
+    .dot.f  { background: var(--frio);   box-shadow: 0 0 5px var(--frio); }
+    .dot.g  { background: var(--green);  box-shadow: 0 0 5px var(--green); }
+    .dot.nc { background: rgba(255,255,255,0.3); }
+
+    /* ── Alert strip ─────────────────────────────────────────── */
+    .alert-strip { border-radius: 10px; padding: 12px 16px; font-size: 12px; margin-bottom: 20px; display: flex; align-items: center; gap: 10px; }
+    .alert-strip.urgente { background: rgba(255,77,77,0.07);  border: 1px solid rgba(255,77,77,0.25);  color: var(--quente); }
+    .alert-strip.atencao { background: rgba(255,149,0,0.07);  border: 1px solid rgba(255,149,0,0.25);  color: var(--morno); }
+    .alert-strip.ok      { background: rgba(105,205,90,0.07); border: 1px solid rgba(105,205,90,0.25); color: var(--green); }
+
+    /* ── VGV ─────────────────────────────────────────────────── */
+    .card-value.vgv { font-size: 24px; letter-spacing: -.5px; }
+    .vgv-bar-wrap { margin-top: 10px; height: 4px; background: var(--surface2); border-radius: 2px; overflow: hidden; }
+    .vgv-bar { height: 100%; border-radius: 2px; transition: width .6s ease; }
+    .vgv-bar.realizado  { background: var(--green); }
+    .vgv-bar.negociacao { background: var(--lime); }
+    .vgv-stack { margin-top: 10px; height: 5px; background: var(--surface2); border-radius: 3px; overflow: hidden; display: flex; }
+    .vgv-stack-seg { height: 100%; transition: width .6s ease; }
+
+    /* ── Funil de Negociação ─────────────────────────────────── */
+    .funil-row { display: flex; align-items: stretch; gap: 0; margin-bottom: 24px; }
+    .funil-stage {
+      flex: 1; background: var(--surface); border: 1px solid var(--border);
+      border-radius: 12px; padding: 24px 20px; text-align: center;
+      transition: border-color .2s, transform .2s;
+    }
+    .funil-stage:hover { border-color: rgba(105,205,90,0.25); transform: translateY(-1px); }
+    .funil-stage.fs-vend { border-color: rgba(105,205,90,0.3); }
+    .funil-arrow-wrap { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 0 8px; gap: 3px; }
+    .funil-arrow-line { font-size: 20px; color: var(--muted); }
+    .funil-arrow-pct { font-size: 11px; font-weight: 700; padding: 2px 7px; border-radius: 20px; white-space: nowrap; }
+    .funil-arrow-pct.up  { background: rgba(105,205,90,0.12); color: var(--green); }
+    .funil-arrow-pct.mid { background: rgba(255,149,0,0.12);  color: var(--morno); }
+    .funil-arrow-pct.low { background: rgba(255,77,77,0.12);   color: var(--quente); }
+    .funil-stage-label { font-size: 10px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .8px; margin-bottom: 12px; }
+    .funil-stage-count { font-size: 40px; font-weight: 700; line-height: 1; margin-bottom: 6px; }
+    .funil-stage-vgv { font-size: 14px; font-weight: 600; color: var(--muted); margin-bottom: 6px; }
+    .funil-stage-sub { font-size: 11px; color: var(--muted); }
+    .funil-stage-pct-total { font-size: 11px; font-weight: 700; margin-top: 8px; padding: 2px 8px; border-radius: 20px; display: inline-block; }
+
+    /* ── Conv por temperatura ────────────────────────────────── */
+    .conv-progress { margin-top: 12px; }
+    .conv-header { display: flex; justify-content: space-between; font-size: 11px; color: var(--muted); margin-bottom: 5px; }
+    .conv-track { height: 6px; background: var(--surface2); border-radius: 3px; overflow: hidden; }
+    .conv-fill { height: 100%; border-radius: 3px; transition: width .7s ease; }
+
+    /* ── Charts ──────────────────────────────────────────────── */
+    .chart-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 22px; }
+    .chart-title { font-size: 14px; font-weight: 600; margin-bottom: 18px; display: flex; align-items: center; gap: 8px; }
+    .chart-title-sub { font-size: 11px; font-weight: 400; color: var(--muted); }
+    .chart-wrap { position: relative; height: 220px; }
+
+    /* ── Follow-up list ──────────────────────────────────────── */
+    .fu-list { display: flex; flex-direction: column; gap: 6px; }
+    .fu-row { display: flex; align-items: center; justify-content: space-between; padding: 11px 14px; background: var(--surface2); border-radius: 8px; border: 1px solid transparent; transition: border-color .15s; }
+    .fu-row:hover { border-color: var(--border); }
+    .fu-nome { font-size: 13px; font-weight: 500; display: flex; align-items: center; gap: 8px; }
+    .fu-tel { font-size: 11px; color: var(--muted); margin-top: 2px; }
+    .fu-right { display: flex; align-items: center; gap: 10px; }
+    .fu-tempo { font-size: 12px; color: var(--muted); }
+
+    .btn-wa { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 6px; background: rgba(37,211,102,0.12); color: #25D366; border: 1px solid rgba(37,211,102,0.25); text-decoration: none; flex-shrink: 0; transition: all .15s; cursor: pointer; padding: 0; }
+    .btn-wa:hover { background: rgba(37,211,102,0.25); border-color: rgba(37,211,102,0.5); }
+    .btn-wa-disabled { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 6px; background: var(--disabled-bg); color: var(--disabled-color); border: 1px solid var(--disabled-bdr); flex-shrink: 0; cursor: not-allowed; }
+
+    .badge { font-size: 10px; font-weight: 700; padding: 2px 9px; border-radius: 20px; text-transform: uppercase; letter-spacing: .3px; }
+    .badge.urgente { background: rgba(255,77,77,.15);  color: var(--quente); border: 1px solid rgba(255,77,77,.3); }
+    .badge.atencao { background: rgba(255,149,0,.15);  color: var(--morno);  border: 1px solid rgba(255,149,0,.3); }
+    .badge.ok      { background: rgba(105,205,90,.15); color: var(--green);  border: 1px solid rgba(105,205,90,.3); }
+
+    .empty { text-align: center; padding: 36px; color: var(--muted); font-size: 13px; }
+
+    /* ── Auth screen ─────────────────────────────────────────── */
+    .auth-screen { display: none; flex-direction: column; align-items: center; justify-content: center; min-height: 60vh; gap: 0; text-align: center; }
+    .auth-screen.visible { display: flex; }
+    .auth-card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 32px 28px; width: 320px; text-align: left; }
+    .auth-card h2 { font-size: 18px; color: var(--white); margin-bottom: 4px; }
+    .auth-card .auth-sub { font-size: 12px; color: var(--muted); margin-bottom: 20px; }
+    .auth-input { width: 100%; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 10px 14px; color: var(--white); font-size: 13px; font-family: 'Inter', sans-serif; outline: none; margin-bottom: 8px; }
+    .auth-input:focus { border-color: var(--green); }
+    .auth-btn { width: 100%; background: var(--green); color: #000; border: none; border-radius: 8px; padding: 10px 0; font-size: 13px; font-weight: 700; cursor: pointer; font-family: 'Inter', sans-serif; margin-bottom: 8px; }
+    .auth-btn:hover { background: var(--lime); }
+    .auth-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .auth-btn-sec { width: 100%; background: transparent; color: var(--muted); border: 1px solid var(--border); border-radius: 8px; padding: 9px 0; font-size: 12px; cursor: pointer; font-family: 'Inter', sans-serif; }
+    .auth-btn-sec:hover { color: var(--white); border-color: rgba(255,255,255,0.2); }
+    .auth-error { font-size: 11px; color: var(--quente); margin-bottom: 8px; min-height: 14px; }
+    .auth-link-row { text-align: center; margin-top: 10px; font-size: 12px; color: var(--muted); }
+    .auth-link { color: var(--green); cursor: pointer; background: none; border: none; font-size: 12px; font-family: 'Inter', sans-serif; text-decoration: underline; }
+    .auth-spinner { width: 24px; height: 24px; border: 2px solid var(--border); border-top-color: var(--green); border-radius: 50%; animation: spin 0.7s linear infinite; margin: 0 auto 12px; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .block-card { background: rgba(255,77,77,0.05); border: 1px solid rgba(255,77,77,0.2); border-radius: 14px; padding: 32px 28px; width: 320px; text-align: center; }
+    .block-icon { font-size: 36px; margin-bottom: 12px; color: var(--quente); }
+    .block-title { font-size: 16px; font-weight: 700; color: var(--quente); margin-bottom: 8px; }
+    .block-msg { font-size: 12px; color: var(--muted); margin-bottom: 20px; line-height: 1.6; }
+
+    /* ── Pages ───────────────────────────────────────────────── */
+    .page { display: none; }
+    .page.active { display: block; }
+
+    /* ── Responsive ──────────────────────────────────────────── */
+    @media (max-width: 1100px) { .grid-4, .grid-5 { grid-template-columns: repeat(2,1fr); } }
+    @media (max-width: 700px) {
+      .sidebar { display: none; }
+      .main { margin-left: 0; padding: 20px; }
+      .grid-4, .grid-3, .grid-2 { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<aside class="sidebar">
+  <div class="logo">
+    <div class="logo-name"><span class="g">Organiza</span><span class="d">.</span></div>
+    <div class="logo-tagline">Organização que gera venda.</div>
+  </div>
+  <nav>
+    <div class="nav-item active" id="nav-lembretes" onclick="showPage('lembretes')">
+      <span class="nav-icon">◎</span> Lembretes
+      <span class="nav-badge zero" id="nav-badge">0</span>
+    </div>
+    <div class="nav-item" id="nav-performance" onclick="showPage('performance')">
+      <span class="nav-icon">↗</span> Performance
+    </div>
+    <div class="nav-item" id="nav-vgv" onclick="showPage('vgv')">
+      <span class="nav-icon">◈</span> VGV
+    </div>
+  </nav>
+  <div class="sidebar-footer">
+    <div class="user-label">Conta conectada</div>
+    <div class="user-id" id="user-id-display">—</div>
+    <div class="loading-bar" id="loading-bar"></div>
+    <div class="status-row">
+      <span class="status-dot"></span>
+      <span id="status-text">Carregando...</span>
+    </div>
+    <button id="btn-sidebar-logout" onclick="dashLogout()" style="margin-top:10px;width:100%;background:transparent;border:1px solid var(--border);color:var(--muted);font-size:11px;border-radius:6px;padding:5px 0;cursor:pointer;font-family:'Inter',sans-serif">Sair da conta</button>
+  </div>
+</aside>
+
+<main class="main">
+
+  <!-- Tela de autenticação -->
+  <div class="auth-screen" id="auth-screen">
+
+    <!-- Login form -->
+    <div class="auth-card" id="auth-login-card">
+      <div class="logo-name" style="font-size:20px;margin-bottom:4px"><span class="g">Organiza</span><span class="d">.</span></div>
+      <div class="auth-sub">Entre com sua conta para acessar o painel.</div>
+      <input class="auth-input" id="auth-email" type="email" placeholder="seu@email.com" autocomplete="email" />
+      <input class="auth-input" id="auth-pwd" type="password" placeholder="Senha" autocomplete="current-password" />
+      <div class="auth-error" id="auth-error"></div>
+      <button class="auth-btn" id="btn-auth-login">Entrar →</button>
+      <div class="auth-link-row">
+        Não tem conta? <button class="auth-link" id="btn-goto-signup-dash">Criar conta</button>
+        · <button class="auth-link" id="btn-goto-forgot-dash" style="color:var(--muted)">Esqueceu a senha?</button>
+      </div>
+    </div>
+
+    <!-- Signup form -->
+    <div class="auth-card" id="auth-signup-card" style="display:none">
+      <div class="logo-name" style="font-size:20px;margin-bottom:4px"><span class="g">Organiza</span><span class="d">.</span></div>
+      <div class="auth-sub">Crie sua conta para começar.</div>
+      <input class="auth-input" id="auth-signup-email" type="email" placeholder="seu@email.com" />
+      <input class="auth-input" id="auth-signup-pwd" type="password" placeholder="Senha (mínimo 6 caracteres)" />
+      <div class="auth-error" id="auth-signup-error"></div>
+      <button class="auth-btn" id="btn-auth-signup">Criar conta</button>
+      <div class="auth-link-row">
+        Já tem conta? <button class="auth-link" id="btn-goto-login-dash">Entrar</button>
+      </div>
+    </div>
+
+    <!-- Forgot password form -->
+    <div class="auth-card" id="auth-forgot-card" style="display:none">
+      <div class="logo-name" style="font-size:20px;margin-bottom:4px"><span class="g">Organiza</span><span class="d">.</span></div>
+      <div class="auth-sub">Informe seu email para receber o link de redefinição de senha.</div>
+      <input class="auth-input" id="auth-forgot-email" type="email" placeholder="seu@email.com" autocomplete="email" />
+      <div class="auth-error" id="auth-forgot-error"></div>
+      <div class="auth-error" id="auth-forgot-success" style="color:var(--green)"></div>
+      <button class="auth-btn" id="btn-auth-forgot-send">Enviar link</button>
+      <div class="auth-link-row">
+        <button class="auth-link" id="btn-goto-login-from-forgot-dash">Voltar ao login</button>
+      </div>
+    </div>
+
+    <!-- Reset password form (chegou pelo link do email) -->
+    <div class="auth-card" id="auth-reset-card" style="display:none">
+      <div class="logo-name" style="font-size:20px;margin-bottom:4px"><span class="g">Organiza</span><span class="d">.</span></div>
+      <div class="auth-sub">Defina sua nova senha.</div>
+      <input class="auth-input" id="auth-reset-pwd" type="password" placeholder="Nova senha (mínimo 6 caracteres)" autocomplete="new-password" />
+      <input class="auth-input" id="auth-reset-pwd2" type="password" placeholder="Confirmar nova senha" autocomplete="new-password" />
+      <div class="auth-error" id="auth-reset-error"></div>
+      <button class="auth-btn" id="btn-auth-reset-save">Salvar nova senha</button>
+    </div>
+
+    <!-- Loading -->
+    <div id="auth-loading-card" style="display:none;text-align:center;padding:40px 0">
+      <div class="auth-spinner"></div>
+      <p style="font-size:12px;color:var(--muted)" id="auth-loading-msg">Verificando...</p>
+    </div>
+
+    <!-- Bloqueado -->
+    <div class="block-card" id="auth-block-card" style="display:none">
+      <div class="block-icon">⊘</div>
+      <div class="block-title" id="block-title">Assinatura inativa</div>
+      <div class="block-msg" id="block-msg-dash"></div>
+      <button class="auth-btn-sec" id="btn-auth-logout-blocked">Sair da conta</button>
+    </div>
+
+  </div>
+
+  <!-- Conteúdo principal -->
+  <div id="main-content" style="display:none">
+
+    <!-- Topbar global -->
+    <div class="topbar">
+      <div>
+        <div class="page-title" id="page-title">Lembretes</div>
+        <div class="page-sub" id="sub-texto">Carregando dados...</div>
+      </div>
+      <div>
+        <button class="btn-refresh" onclick="carregarDados()">↻ Atualizar</button>
+      </div>
+    </div>
+
+    <!-- ══════════════════════════════════════════════════════════
+         PAGE: LEMBRETES
+         Propósito: o que o corretor precisa fazer AGORA.
+         Conteúdo: alertas de leads sem contato + lista priorizada.
+    ══════════════════════════════════════════════════════════ -->
+    <div class="page active" id="page-lembretes">
+
+      <div id="alert-strip-wrap"></div>
+
+      <p class="section-label">Ação Imediata</p>
+      <div class="grid-3">
+        <div class="card" id="card-f24">
+          <div class="card-label"><span class="dot q"></span> Sem contato +24h</div>
+          <div class="card-value q" id="f-24h">—</div>
+          <div class="card-sub">leads ativos aguardando retorno</div>
+        </div>
+        <div class="card" id="card-f7d">
+          <div class="card-label"><span class="dot m"></span> Sem contato +7 dias</div>
+          <div class="card-value m" id="f-7d">—</div>
+          <div class="card-sub">risco de esfriamento</div>
+        </div>
+        <div class="card">
+          <div class="card-label"><span class="dot nc"></span> Sem classificação</div>
+          <div class="card-value" id="sem-class" style="color:var(--muted)">—</div>
+          <div class="card-sub">aguardando triagem</div>
+        </div>
+      </div>
+
+      <p class="section-label">Distribuição por Tempo sem Contato</p>
+      <div class="chart-card" style="margin-bottom:24px">
+        <div class="chart-title">Leads Ativos por Tempo de Espera <span class="chart-title-sub">usando data de entrada como referência</span></div>
+        <div class="chart-wrap" style="height:160px"><canvas id="chart-hist-contato"></canvas></div>
+      </div>
+
+      <p class="section-label">Leads Prioritários</p>
+      <div class="section-sub" id="fu-sub"></div>
+      <div class="chart-card">
+        <div class="fu-list" id="fu-lista">
+          <div class="empty">Carregando...</div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- ══════════════════════════════════════════════════════════
+         PAGE: PERFORMANCE
+         Propósito: entender resultados, evoluções e tendências.
+         Conteúdo: métricas, VGV, comparativo mensal, gráficos.
+    ══════════════════════════════════════════════════════════ -->
+    <div class="page" id="page-performance">
+
+      <!-- Filtro de período — pertence só a esta página -->
+      <div class="perf-header">
+        <span class="perf-header-label">Período de análise</span>
+        <div class="period-tabs">
+          <button class="period-tab active" onclick="setPeriodo(7,this)">7d</button>
+          <button class="period-tab" onclick="setPeriodo(30,this)">30d</button>
+          <button class="period-tab" onclick="setPeriodo(90,this)">90d</button>
+          <button class="period-tab" onclick="setPeriodo(0,this)">Tudo</button>
+        </div>
+      </div>
+
+      <p class="section-label">Visão Geral</p>
+      <div class="grid-4">
+        <div class="card">
+          <div class="card-label"><span class="dot g"></span> Total de Leads</div>
+          <div class="card-value g" id="total-leads">—</div>
+          <div class="card-sub">acumulado total</div>
+        </div>
+        <div class="card">
+          <div class="card-label">Hoje</div>
+          <div class="card-value" id="leads-hoje">—</div>
+          <div class="card-sub" id="sub-hoje">—</div>
+        </div>
+        <div class="card">
+          <div class="card-label">Últimos 7 dias</div>
+          <div class="card-value" id="leads-semana">—</div>
+          <div class="card-sub" id="sub-semana">—</div>
+        </div>
+        <div class="card">
+          <div class="card-label">Este Mês</div>
+          <div class="card-value l" id="leads-mes">—</div>
+          <div class="card-sub" id="sub-mes">—</div>
+        </div>
+      </div>
+
+      <p class="section-label">Mês Atual vs Mês Anterior</p>
+      <div class="grid-4">
+        <div class="card">
+          <div class="card-label">Mês Atual</div>
+          <div class="card-value g" id="evo-mes-atual">—</div>
+          <div class="card-sub" id="evo-mes-nome">—</div>
+          <div id="evo-delta-mes"></div>
+        </div>
+        <div class="card">
+          <div class="card-label">Mês Anterior</div>
+          <div class="card-value" id="evo-mes-ant" style="color:var(--muted)">—</div>
+          <div class="card-sub" id="evo-mes-ant-nome">—</div>
+        </div>
+        <div class="card">
+          <div class="card-label"><span class="dot q"></span> Quentes este mês</div>
+          <div class="card-value q" id="evo-quente-mes">—</div>
+          <div class="card-sub" id="evo-quente-delta">—</div>
+          <div id="evo-delta-quente"></div>
+        </div>
+        <div class="card">
+          <div class="card-label">Taxa de classificação</div>
+          <div class="card-value" id="evo-taxa-class" style="color:var(--lime)">—</div>
+          <div class="card-sub" id="evo-taxa-ant">mês anterior: —</div>
+          <div id="evo-delta-taxa"></div>
+        </div>
+      </div>
+
+      <p class="section-label">Progressão no Funil <span style="font-size:10px;font-weight:400;color:var(--muted);text-transform:none;letter-spacing:0">leads criados este mês vs mês anterior</span></p>
+      <div class="grid-3">
+        <div class="card">
+          <div class="card-label"><span class="dot m"></span> Em Negociação este Mês</div>
+          <div class="card-value m" id="funil-neg-mes">—</div>
+          <div class="card-sub" id="funil-neg-sub">—</div>
+          <div id="funil-neg-delta"></div>
+        </div>
+        <div class="card">
+          <div class="card-label"><span class="dot g"></span> Vendidos este Mês</div>
+          <div class="card-value g" id="funil-vend-mes">—</div>
+          <div class="card-sub" id="funil-vend-sub">—</div>
+          <div id="funil-vend-delta"></div>
+        </div>
+        <div class="card">
+          <div class="card-label"><span class="dot" style="background:var(--lime)"></span> Taxa de Progressão</div>
+          <div class="card-value" id="funil-taxa-prog" style="color:var(--lime)">—</div>
+          <div class="card-sub" id="funil-taxa-sub">leads que saíram de busca</div>
+          <div id="funil-taxa-delta"></div>
+        </div>
+      </div>
+
+      <p class="section-label">
+        Classificação
+        <span style="font-size:10px;font-weight:400;color:var(--muted);text-transform:none;letter-spacing:0" id="periodo-label">(últimos 7 dias)</span>
+      </p>
+      <div class="section-sub" id="total-class-sub">—</div>
+      <div class="grid-4">
+        <div class="card">
+          <div class="card-label"><span class="dot q"></span> Quentes</div>
+          <div class="card-value q" id="total-quente">—</div>
+          <div class="card-sub" id="pct-quente">—</div>
+        </div>
+        <div class="card">
+          <div class="card-label"><span class="dot m"></span> Mornos</div>
+          <div class="card-value m" id="total-morno">—</div>
+          <div class="card-sub" id="pct-morno">—</div>
+        </div>
+        <div class="card">
+          <div class="card-label"><span class="dot f"></span> Frios</div>
+          <div class="card-value f" id="total-frio">—</div>
+          <div class="card-sub" id="pct-frio">—</div>
+        </div>
+        <div class="card">
+          <div class="card-label"><span class="dot nc"></span> Sem classificação</div>
+          <div class="card-value" id="total-semclass" style="color:var(--muted)">—</div>
+          <div class="card-sub" id="pct-semclass">—</div>
+        </div>
+      </div>
+
+      <div class="grid-2">
+        <div class="chart-card">
+          <div class="chart-title">
+            Distribuição por Classificação
+            <span class="chart-title-sub" id="pizza-periodo"></span>
+          </div>
+          <div class="chart-wrap"><canvas id="chart-pizza"></canvas></div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-title">
+            Leads por Dia
+            <span class="chart-title-sub" id="linha-periodo"></span>
+          </div>
+          <div class="chart-wrap"><canvas id="chart-linha"></canvas></div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- ══════════════════════════════════════════════════════════
+         PAGE: VGV
+         Propósito: entender o dinheiro — pipeline, conversão e ticket.
+         Conteúdo: KPIs financeiros, funil, conversão por temperatura.
+    ══════════════════════════════════════════════════════════ -->
+    <div class="page" id="page-vgv">
+
+      <div id="vgv-health-strip"></div>
+
+      <p class="section-label">Indicadores-Chave</p>
+      <div class="grid-5">
+        <div class="card">
+          <div class="card-label"><span class="dot" style="background:var(--white)"></span> VGV Total</div>
+          <div class="card-value vgv" id="kpi-vgv-total" style="color:var(--white)">—</div>
+          <div class="card-sub" id="kpi-vgv-total-sub">todo o pipeline</div>
+        </div>
+        <div class="card">
+          <div class="card-label"><span class="dot g"></span> VGV Realizado</div>
+          <div class="card-value g vgv" id="kpi-vgv-real">—</div>
+          <div class="card-sub" id="kpi-vgv-real-sub">0 vendas fechadas</div>
+        </div>
+        <div class="card">
+          <div class="card-label"><span class="dot" style="background:var(--lime)"></span> Ticket Médio</div>
+          <div class="card-value vgv" id="kpi-ticket-medio" style="color:var(--lime)">—</div>
+          <div class="card-sub" id="kpi-ticket-medio-sub">por venda realizada</div>
+        </div>
+        <div class="card">
+          <div class="card-label"><span class="dot f"></span> Taxa de Conversão</div>
+          <div class="card-value f" id="kpi-taxa-conv">—</div>
+          <div class="card-sub" id="kpi-taxa-conv-sub">pipeline → vendido</div>
+        </div>
+        <div class="card">
+          <div class="card-label"><span class="dot q"></span> Conversão Quentes</div>
+          <div class="card-value q" id="kpi-conv-quente">—</div>
+          <div class="card-sub" id="kpi-conv-quente-sub">leads quentes → venda</div>
+        </div>
+      </div>
+
+      <div class="grid-2" style="margin-bottom:24px">
+        <div class="card">
+          <div class="card-label"><span class="dot" style="background:var(--lime)"></span> Ciclo Médio de Venda</div>
+          <div class="card-value vgv" id="kpi-ciclo-venda" style="color:var(--lime)">—</div>
+          <div class="card-sub" id="kpi-ciclo-sub">desde entrada até fechamento (mediana)</div>
+        </div>
+        <div class="card">
+          <div class="card-label"><span class="dot m"></span> Lead Mais Antigo em Negociação</div>
+          <div class="card-value m" id="kpi-neg-antigo">—</div>
+          <div class="card-sub" id="kpi-neg-antigo-sub">risco de perda por tempo</div>
+        </div>
+      </div>
+
+      <p class="section-label">Funil de Negociação</p>
+      <div class="funil-row">
+        <div class="funil-stage">
+          <div class="funil-stage-label">Em Busca</div>
+          <div class="funil-stage-count" id="fs-busca-n" style="color:var(--frio)">—</div>
+          <div class="funil-stage-vgv" id="fs-busca-vgv">—</div>
+          <div class="funil-stage-sub">leads com imóvel mapeado</div>
+          <div class="funil-stage-pct-total" id="fs-busca-pct" style="background:rgba(77,158,255,0.1);color:var(--frio)">—</div>
+        </div>
+        <div class="funil-arrow-wrap">
+          <div class="funil-arrow-line">→</div>
+          <div class="funil-arrow-pct" id="fa-busca-neg">—</div>
+        </div>
+        <div class="funil-stage">
+          <div class="funil-stage-label">Em Negociação</div>
+          <div class="funil-stage-count" id="fs-neg-n" style="color:var(--morno)">—</div>
+          <div class="funil-stage-vgv" id="fs-neg-vgv">—</div>
+          <div class="funil-stage-sub">proposta ou visita em andamento</div>
+          <div class="funil-stage-pct-total" id="fs-neg-pct" style="background:rgba(255,149,0,0.1);color:var(--morno)">—</div>
+        </div>
+        <div class="funil-arrow-wrap">
+          <div class="funil-arrow-line">→</div>
+          <div class="funil-arrow-pct" id="fa-neg-vend">—</div>
+        </div>
+        <div class="funil-stage fs-vend">
+          <div class="funil-stage-label">Vendas Fechadas</div>
+          <div class="funil-stage-count" id="fs-vend-n" style="color:var(--green)">—</div>
+          <div class="funil-stage-vgv" id="fs-vend-vgv">—</div>
+          <div class="funil-stage-sub">negócios concluídos</div>
+          <div class="funil-stage-pct-total" id="fs-vend-pct" style="background:rgba(105,205,90,0.1);color:var(--green)">—</div>
+        </div>
+      </div>
+
+      <p class="section-label">Conversão por Temperatura de Lead</p>
+      <p class="section-sub" id="conv-temp-sub">—</p>
+      <div class="grid-3">
+        <div class="card">
+          <div class="card-label"><span class="dot q"></span> Leads Quentes</div>
+          <div class="card-value q" id="ct-q-rate">—</div>
+          <div class="card-sub" id="ct-q-sub">—</div>
+          <div class="conv-progress">
+            <div class="conv-header"><span id="ct-q-vend-n">0 vendas</span><span id="ct-q-total-n">de 0 quentes</span></div>
+            <div class="conv-track"><div class="conv-fill" id="ct-q-bar" style="width:0%;background:var(--quente)"></div></div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-label"><span class="dot m"></span> Leads Mornos</div>
+          <div class="card-value m" id="ct-m-rate">—</div>
+          <div class="card-sub" id="ct-m-sub">—</div>
+          <div class="conv-progress">
+            <div class="conv-header"><span id="ct-m-vend-n">0 vendas</span><span id="ct-m-total-n">de 0 mornos</span></div>
+            <div class="conv-track"><div class="conv-fill" id="ct-m-bar" style="width:0%;background:var(--morno)"></div></div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-label"><span class="dot f"></span> Leads Frios</div>
+          <div class="card-value f" id="ct-f-rate">—</div>
+          <div class="card-sub" id="ct-f-sub">—</div>
+          <div class="conv-progress">
+            <div class="conv-header"><span id="ct-f-vend-n">0 vendas</span><span id="ct-f-total-n">de 0 frios</span></div>
+            <div class="conv-track"><div class="conv-fill" id="ct-f-bar" style="width:0%;background:var(--frio)"></div></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="grid-2">
+        <div class="chart-card">
+          <div class="chart-title">VGV por Status do Negócio <span class="chart-title-sub">valor total por etapa</span></div>
+          <div class="chart-wrap"><canvas id="chart-vgv-status"></canvas></div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-title">Ticket Médio por Temperatura <span class="chart-title-sub">vendas realizadas</span></div>
+          <div class="chart-wrap"><canvas id="chart-ticket-temp"></canvas></div>
+        </div>
+      </div>
+
+    </div>
+
+  </div><!-- /main-content -->
+</main>
+
+<script>
+const SUPABASE_URL = 'https://tkxvbuzykfnoxiyeoams.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRreHZidXp5a2Zub3hpeWVvYW1zIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUxNjczMzMsImV4cCI6MjA5MDc0MzMzM30.eUpA1ZR-h-4j0XOXhoHYXC98ESPtekWDsON5HYCtq30';
+const EXTENSION_ID = ' jpdkjncfcnifeddpopfdegbkbckkimgd';
+
+let periodoDias       = 7;
+let chartPizza        = null;
+let chartLinha        = null;
+let chartVgvBar       = null;
+let chartTicket       = null;
+let chartHistContato  = null;
+let todosLeads        = [];
+let currentUid        = null;
+
+const WA_SVG = `<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>`;
+
+// ── Auth ─────────────────────────────────────────────────────
+const SUPABASE_URL_DASH = 'https://tkxvbuzykfnoxiyeoams.supabase.co';
+const SUPABASE_KEY_DASH = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRreHZidXp5a2Zub3hpeWVvYW1zIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUxNjczMzMsImV4cCI6MjA5MDc0MzMzM30.eUpA1ZR-h-4j0XOXhoHYXC98ESPtekWDsON5HYCtq30';
+
+let dashJwt = null;
+
+function showAuthCard(id, loadingMsg) {
+  ['auth-login-card','auth-signup-card','auth-forgot-card','auth-reset-card','auth-loading-card','auth-block-card'].forEach(c => {
+    document.getElementById(c).style.display = c === id ? '' : 'none';
+  });
+  if (id === 'auth-loading-card' && loadingMsg) {
+    document.getElementById('auth-loading-msg').textContent = loadingMsg;
+  }
+}
+
+async function dashApiAuth(endpoint, body) {
+  const r = await fetch(`${SUPABASE_URL_DASH}/auth/v1/${endpoint}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_KEY_DASH },
+    body: JSON.stringify(body)
+  });
+  const data = await r.json();
+  if (!r.ok) throw new Error(data.error_description || data.msg || 'Erro de autenticação');
+  return data;
+}
+
+async function fetchDashProfile(jwt, uid) {
+  const r = await fetch(
+    `${SUPABASE_URL_DASH}/rest/v1/profiles?id=eq.${uid}&select=phone,plano_expira_em`,
+    { headers: { 'apikey': SUPABASE_KEY_DASH, 'Authorization': `Bearer ${jwt}` } }
+  );
+  if (!r.ok) return null;
+  const data = await r.json();
+  return data[0] || null;
+}
+
+function saveAuthSession(data) {
+  const session = {
+    access_token:  data.access_token,
+    refresh_token: data.refresh_token,
+    user_id:       data.user.id,
+    email:         data.user.email,
+    expires_at:    Date.now() + (data.expires_in || 3600) * 1000
+  };
+  sessionStorage.setItem('organiza_session', JSON.stringify(session));
+  return session;
+}
+
+function getAuthSession() {
+  try { return JSON.parse(sessionStorage.getItem('organiza_session')); } catch { return null; }
+}
+
+async function refreshAuthSession(session) {
+  try {
+    const r = await fetch(`${SUPABASE_URL_DASH}/auth/v1/token?grant_type=refresh_token`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_KEY_DASH },
+      body: JSON.stringify({ refresh_token: session.refresh_token })
+    });
+    if (!r.ok) return null;
+    return r.json();
+  } catch { return null; }
+}
+
+function checkDashPlano(profile) {
+  if (!profile || !profile.plano_expira_em) return 'pending';
+  return new Date(profile.plano_expira_em) > new Date() ? 'ok' : 'expired';
+}
+
+function showAuthBlocked(status, profile) {
+  document.getElementById('auth-screen').classList.add('visible');
+  showAuthCard('auth-block-card');
+  const title = document.getElementById('block-title');
+  const msg   = document.getElementById('block-msg-dash');
+  if (status === 'expired') {
+    title.textContent = '⊘ Assinatura expirada';
+    msg.textContent   = `Sua assinatura expirou em ${new Date(profile.plano_expira_em).toLocaleDateString('pt-BR')}. Entre em contato para renovar.`;
+  } else {
+    title.textContent = '◌ Aguardando ativação';
+    title.style.color = 'var(--morno)';
+    msg.textContent   = 'Sua conta está aguardando ativação. Entre em contato com a equipe Organiza.';
+  }
+}
+
+async function initWithJwt(jwt, uid, email) {
+  dashJwt = jwt;
+  document.getElementById('user-id-display').textContent = email || uid;
+
+  const profile = await fetchDashProfile(jwt, uid).catch(() => null);
+  const status  = checkDashPlano(profile);
+
+  if (status !== 'ok') { showAuthBlocked(status, profile); return; }
+
+  currentUid = uid;
+  document.getElementById('auth-screen').classList.remove('visible');
+  document.getElementById('main-content').style.display = 'block';
+  carregarDados();
+}
+
+let recoveryToken = null;
+
+async function initDashAuth() {
+  const authScreen = document.getElementById('auth-screen');
+  authScreen.classList.add('visible');
+  showAuthCard('auth-loading-card', 'Verificando sessão...');
+
+  // 0. Check for password recovery token in URL hash (#type=recovery&access_token=...)
+  if (window.location.hash) {
+    const hash = new URLSearchParams(window.location.hash.slice(1));
+    if (hash.get('type') === 'recovery' && hash.get('access_token')) {
+      recoveryToken = hash.get('access_token');
+      history.replaceState({}, '', window.location.pathname);
+      showAuthCard('auth-reset-card');
+      return;
+    }
+  }
+
+  // 1. Check for token passed by extension in URL
+  const params = new URLSearchParams(window.location.search);
+  const urlToken = params.get('token');
+  if (urlToken) {
+    // Store and clean URL
+    try {
+      const r = await fetch(`${SUPABASE_URL_DASH}/auth/v1/user`, {
+        headers: { 'apikey': SUPABASE_KEY_DASH, 'Authorization': `Bearer ${urlToken}` }
+      });
+      if (r.ok) {
+        const user = await r.json();
+        const fakeSession = { access_token: urlToken, refresh_token: '', user_id: user.id, email: user.email, expires_at: Date.now() + 3600000 };
+        sessionStorage.setItem('organiza_session', JSON.stringify(fakeSession));
+        history.replaceState({}, '', window.location.pathname);
+        await initWithJwt(urlToken, user.id, user.email);
+        return;
+      }
+    } catch {}
+  }
+
+  // 2. Check stored session
+  let session = getAuthSession();
+  if (session) {
+    if (session.expires_at < Date.now() + 60000) {
+      showAuthCard('auth-loading-card', 'Renovando sessão...');
+      const refreshed = await refreshAuthSession(session);
+      if (refreshed) {
+        session = saveAuthSession(refreshed);
+      } else {
+        sessionStorage.removeItem('organiza_session');
+        session = null;
+      }
+    }
+    if (session) {
+      await initWithJwt(session.access_token, session.user_id, session.email);
+      return;
+    }
+  }
+
+  // 4. Show login
+  showAuthCard('auth-login-card');
+}
+
+function dashLogout() {
+  dashJwt = null;
+  currentUid = null;
+  sessionStorage.removeItem('organiza_session');
+  document.getElementById('main-content').style.display = 'none';
+  document.getElementById('auth-screen').classList.add('visible');
+  showAuthCard('auth-login-card');
+}
+
+// ── Auth form handlers ───────────────────────────────────────
+document.getElementById('btn-auth-login').addEventListener('click', async () => {
+  const email  = document.getElementById('auth-email').value.trim();
+  const pwd    = document.getElementById('auth-pwd').value;
+  const errEl  = document.getElementById('auth-error');
+  errEl.textContent = '';
+  if (!email || !pwd) { errEl.textContent = 'Preencha email e senha.'; return; }
+
+  const btn = document.getElementById('btn-auth-login');
+  btn.disabled = true; btn.textContent = 'Entrando...';
+  showAuthCard('auth-loading-card', 'Entrando...');
+
+  try {
+    const data = await dashApiAuth('token?grant_type=password', { email, password: pwd });
+    const session = saveAuthSession(data);
+    await initWithJwt(session.access_token, session.user_id, session.email);
+  } catch (e) {
+    showAuthCard('auth-login-card');
+    errEl.textContent = e.message;
+  } finally {
+    btn.disabled = false; btn.textContent = 'Entrar →';
+  }
+});
+
+document.getElementById('btn-auth-signup').addEventListener('click', async () => {
+  const email  = document.getElementById('auth-signup-email').value.trim();
+  const pwd    = document.getElementById('auth-signup-pwd').value;
+  const errEl  = document.getElementById('auth-signup-error');
+  errEl.textContent = '';
+  if (!email || !pwd) { errEl.textContent = 'Preencha email e senha.'; return; }
+  if (pwd.length < 6)  { errEl.textContent = 'Senha deve ter mínimo 6 caracteres.'; return; }
+
+  const btn = document.getElementById('btn-auth-signup');
+  btn.disabled = true; btn.textContent = 'Criando...';
+  showAuthCard('auth-loading-card', 'Criando conta...');
+
+  try {
+    const data = await dashApiAuth('signup', { email, password: pwd });
+    if (!data.access_token) {
+      showAuthCard('auth-login-card');
+      document.getElementById('auth-error').textContent = '✓ Conta criada! Verifique seu email, depois faça login.';
+      return;
+    }
+    const session = saveAuthSession(data);
+    await initWithJwt(session.access_token, session.user_id, session.email);
+  } catch (e) {
+    showAuthCard('auth-signup-card');
+    errEl.textContent = e.message;
+  } finally {
+    btn.disabled = false; btn.textContent = 'Criar conta';
+  }
+});
+
+document.getElementById('btn-goto-signup-dash').addEventListener('click', () => {
+  document.getElementById('auth-error').textContent = '';
+  showAuthCard('auth-signup-card');
+});
+document.getElementById('btn-goto-login-dash').addEventListener('click', () => {
+  document.getElementById('auth-signup-error').textContent = '';
+  showAuthCard('auth-login-card');
+});
+document.getElementById('btn-goto-forgot-dash').addEventListener('click', () => {
+  document.getElementById('auth-error').textContent = '';
+  document.getElementById('auth-forgot-error').textContent = '';
+  document.getElementById('auth-forgot-success').textContent = '';
+  showAuthCard('auth-forgot-card');
+});
+document.getElementById('btn-goto-login-from-forgot-dash').addEventListener('click', () => {
+  document.getElementById('auth-forgot-error').textContent = '';
+  document.getElementById('auth-forgot-success').textContent = '';
+  showAuthCard('auth-login-card');
+});
+
+document.getElementById('btn-auth-forgot-send').addEventListener('click', async () => {
+  const email = document.getElementById('auth-forgot-email').value.trim();
+  const errEl = document.getElementById('auth-forgot-error');
+  const sucEl = document.getElementById('auth-forgot-success');
+  errEl.textContent = '';
+  sucEl.textContent = '';
+
+  if (!email) { errEl.textContent = 'Informe seu email.'; return; }
+
+  const btn = document.getElementById('btn-auth-forgot-send');
+  btn.disabled = true; btn.textContent = 'Enviando...';
+
+  try {
+    const r = await fetch(`${SUPABASE_URL_DASH}/auth/v1/recover`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_KEY_DASH },
+      body: JSON.stringify({ email, redirect_to: window.location.origin + window.location.pathname })
+    });
+    if (!r.ok) { const d = await r.json(); throw new Error(d.error_description || 'Erro ao enviar email.'); }
+    sucEl.textContent = '✓ Link enviado! Verifique seu email e clique no link para redefinir a senha.';
+    document.getElementById('auth-forgot-email').value = '';
+  } catch (e) {
+    errEl.textContent = e.message;
+  } finally {
+    btn.disabled = false; btn.textContent = 'Enviar link';
+  }
+});
+
+document.getElementById('btn-auth-reset-save').addEventListener('click', async () => {
+  const pwd  = document.getElementById('auth-reset-pwd').value;
+  const pwd2 = document.getElementById('auth-reset-pwd2').value;
+  const errEl = document.getElementById('auth-reset-error');
+  errEl.textContent = '';
+
+  if (!pwd || pwd.length < 6) { errEl.textContent = 'Senha deve ter mínimo 6 caracteres.'; return; }
+  if (pwd !== pwd2) { errEl.textContent = 'As senhas não coincidem.'; return; }
+  if (!recoveryToken) { errEl.textContent = 'Token inválido. Solicite um novo link.'; return; }
+
+  const btn = document.getElementById('btn-auth-reset-save');
+  btn.disabled = true; btn.textContent = 'Salvando...';
+  showAuthCard('auth-loading-card', 'Salvando nova senha...');
+
+  try {
+    const r = await fetch(`${SUPABASE_URL_DASH}/auth/v1/user`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_KEY_DASH, 'Authorization': `Bearer ${recoveryToken}` },
+      body: JSON.stringify({ password: pwd })
+    });
+    if (!r.ok) { const d = await r.json(); throw new Error(d.error_description || 'Erro ao salvar senha.'); }
+    recoveryToken = null;
+    showAuthCard('auth-login-card');
+    document.getElementById('auth-error').textContent = '';
+    document.getElementById('auth-error').style.color = 'var(--green)';
+    document.getElementById('auth-error').textContent = '✓ Senha redefinida! Faça login com a nova senha.';
+  } catch (e) {
+    showAuthCard('auth-reset-card');
+    errEl.textContent = e.message;
+  } finally {
+    btn.disabled = false; btn.textContent = 'Salvar nova senha';
+  }
+});
+
+document.getElementById('btn-auth-logout-blocked').addEventListener('click', dashLogout);
+
+document.getElementById('auth-pwd').addEventListener('keydown', e => { if (e.key === 'Enter') document.getElementById('btn-auth-login').click(); });
+document.getElementById('auth-signup-pwd').addEventListener('keydown', e => { if (e.key === 'Enter') document.getElementById('btn-auth-signup').click(); });
+
+// ── Navegação ────────────────────────────────────────────────
+const PAGE_TITLES = {
+  lembretes:   'Lembretes',
+  performance: 'Seus <span style="color:var(--green)">Resultados</span>',
+  vgv:         'Análise de <span style="color:var(--green)">VGV</span>'
+};
+function showPage(page) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('page-' + page).classList.add('active');
+  document.getElementById('nav-' + page).classList.add('active');
+  document.getElementById('page-title').innerHTML = PAGE_TITLES[page] || page;
+}
+
+// ── Utilitários ──────────────────────────────────────────────
+function setLoading(on) { document.getElementById('loading-bar').classList.toggle('on', on); }
+
+function filtrar(leads, dias) {
+  if (!dias) return leads;
+  const lim = new Date(); lim.setDate(lim.getDate() - dias);
+  return leads.filter(l => new Date(l.criado_em) >= lim);
+}
+
+function tempo(dataStr) {
+  const diff = Date.now() - new Date(dataStr).getTime();
+  const h = Math.floor(diff / 3600000);
+  if (h < 1)  return 'agora';
+  if (h < 24) return h + 'h';
+  const d = Math.floor(h / 24);
+  return d < 30 ? d + 'd' : Math.floor(d / 30) + ' meses';
+}
+
+async function fetchLeads(profileId, jwt) {
+  const res = await fetch(
+    `${SUPABASE_URL}/rest/v1/leads?select=id,nome,telefone,classificacao,criado_em,profile_id,ticket,localizacao,momento_compra,status_negociacao&profile_id=eq.${encodeURIComponent(profileId)}&order=criado_em.desc`,
+    { headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${jwt}` } }
+  );
+  if (!res.ok) throw new Error('Erro ' + res.status);
+  return res.json();
+}
+
+function formatarVGV(v) {
+  if (!v || v === 0) return 'R$ 0';
+  if (v >= 1000000) return 'R$ ' + (v / 1000000).toFixed(v % 1000000 === 0 ? 0 : 1).replace('.', ',') + 'M';
+  if (v >= 1000)    return 'R$ ' + Math.round(v / 1000) + 'K';
+  return 'R$ ' + v.toLocaleString('pt-BR');
+}
+
+function delta(atual, ant) {
+  if (ant === 0 && atual === 0) return { cls: 'flat', txt: '= igual ao anterior' };
+  if (ant === 0) return { cls: 'up', txt: '↑ novo' };
+  const pct = Math.round((atual - ant) / ant * 100);
+  if (pct > 0)  return { cls: 'up',   txt: `↑ ${pct}% vs mês anterior` };
+  if (pct < 0)  return { cls: 'down', txt: `↓ ${Math.abs(pct)}% vs mês anterior` };
+  return { cls: 'flat', txt: '= igual ao anterior' };
+}
+
+function nomeMes(d) { return d.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' }); }
+
+// ── WhatsApp ─────────────────────────────────────────────────
+function abrirWhatsApp(tel) {
+  const url = `https://web.whatsapp.com/send?phone=${tel}`;
+  try {
+    if (typeof chrome !== 'undefined' && chrome.runtime && EXTENSION_ID.trim() !== '__EXTENSION_ID__') {
+      chrome.runtime.sendMessage(EXTENSION_ID.trim(), { type: 'OPEN_WHATSAPP', url });
+      return;
+    }
+  } catch(e) {}
+  window.open(url, '_whatsapp');
+}
+
+// ── Renderização de linha de lead ────────────────────────────
+function renderLeadRow(l, lista) {
+  const diff = Date.now() - new Date(l.criado_em).getTime();
+  const dias = Math.floor(diff / 86400000);
+  const bc = dias > 7 ? 'urgente' : dias > 2 ? 'atencao' : 'ok';
+  const bt = dias > 7 ? 'urgente' : dias > 2 ? 'atenção' : 'ok';
+  const dc = l.classificacao === 'quente' ? 'q' : l.classificacao === 'morno' ? 'm' : l.classificacao === 'frio' ? 'f' : 'nc';
+
+  const uidLimpo  = (currentUid || '').replace(/\D/g, '');
+  const telBruto  = l.telefone ? l.telefone.trim() : '';
+  const telLimpo  = telBruto.replace(/\D/g, '');
+  const invalido  = !telBruto || telBruto.toUpperCase() === 'EMPTY' || telLimpo === uidLimpo || telLimpo.length < 8;
+  const telRaw    = invalido ? '' : telBruto;
+  const telExib   = telRaw || 'sem telefone';
+  const telWa     = telRaw.replace(/\D/g, '');
+
+  const row = document.createElement('div');
+  row.className = 'fu-row';
+  row.innerHTML = `
+    <div>
+      <div class="fu-nome"><span class="dot ${dc}"></span>${l.nome}</div>
+      <div class="fu-tel">${telExib}</div>
+    </div>
+    <div class="fu-right">
+      <span class="fu-tempo">${tempo(l.criado_em)}</span>
+      <span class="badge ${bc}">${bt}</span>
+    </div>`;
+
+  const btn = document.createElement(telWa.length >= 8 ? 'button' : 'span');
+  btn.className = 'btn-wa' + (telWa.length >= 8 ? '' : ' btn-wa-disabled');
+  btn.title = telWa.length >= 8 ? 'Abrir no WhatsApp Web' : 'Sem telefone cadastrado';
+  btn.innerHTML = WA_SVG;
+  if (telWa.length >= 8) btn.addEventListener('click', () => abrirWhatsApp(telWa));
+  row.querySelector('.fu-right').appendChild(btn);
+  lista.appendChild(row);
+}
+
+// ── Render principal ─────────────────────────────────────────
+function renderDados(leads) {
+  const agora     = new Date();
+  const hoje      = new Date(agora); hoje.setHours(0,0,0,0);
+  const sem7      = new Date(agora); sem7.setDate(agora.getDate()-7);
+  const mes1      = new Date(agora); mes1.setDate(1); mes1.setHours(0,0,0,0);
+  const mesAntIni = new Date(agora.getFullYear(), agora.getMonth()-1, 1);
+  const mesAntFim = new Date(agora.getFullYear(), agora.getMonth(), 0, 23, 59, 59, 999);
+
+  // ── Visão Geral ──────────────────────────────────────────
+  const total = leads.length;
+  const pHoje = leads.filter(l => new Date(l.criado_em) >= hoje).length;
+  const pSem  = leads.filter(l => new Date(l.criado_em) >= sem7).length;
+  const pMes  = leads.filter(l => new Date(l.criado_em) >= mes1).length;
+
+  document.getElementById('total-leads').textContent  = total;
+  document.getElementById('leads-hoje').textContent   = pHoje;
+  document.getElementById('leads-semana').textContent = pSem;
+  document.getElementById('leads-mes').textContent    = pMes;
+  document.getElementById('sub-hoje').textContent   = pHoje > 0 ? `${pHoje} cadastrado${pHoje>1?'s':''} hoje` : 'nenhum hoje';
+  document.getElementById('sub-semana').textContent = pSem  > 0 ? `${pSem} nos últimos 7 dias` : 'nenhum';
+  document.getElementById('sub-mes').textContent    = pMes  > 0 ? `${pMes} neste mês` : 'nenhum';
+
+  // ── Evolução mensal ──────────────────────────────────────
+  const leadsAnt   = leads.filter(l => { const d=new Date(l.criado_em); return d>=mesAntIni&&d<=mesAntFim; });
+  const pMesAnt    = leadsAnt.length;
+  const qMesAtual  = leads.filter(l => new Date(l.criado_em)>=mes1 && l.classificacao==='quente').length;
+  const qMesAnt    = leadsAnt.filter(l => l.classificacao==='quente').length;
+  const classAtual = leads.filter(l => new Date(l.criado_em)>=mes1 && l.classificacao).length;
+  const classAnt   = leadsAnt.filter(l => l.classificacao).length;
+  const taxaAtual  = pMes    > 0 ? Math.round(classAtual / pMes    * 100) : 0;
+  const taxaAnt    = pMesAnt > 0 ? Math.round(classAnt   / pMesAnt * 100) : 0;
+
+  document.getElementById('evo-mes-atual').textContent     = pMes;
+  document.getElementById('evo-mes-nome').textContent      = nomeMes(agora);
+  document.getElementById('evo-mes-ant').textContent       = pMesAnt;
+  document.getElementById('evo-mes-ant-nome').textContent  = nomeMes(mesAntIni);
+  document.getElementById('evo-quente-mes').textContent    = qMesAtual;
+  document.getElementById('evo-taxa-class').textContent    = taxaAtual + '%';
+  document.getElementById('evo-taxa-ant').textContent      = `mês anterior: ${taxaAnt}%`;
+  document.getElementById('evo-quente-delta').textContent  = `ant: ${qMesAnt} quentes`;
+
+  const dMes    = delta(pMes, pMesAnt);
+  const dQuente = delta(qMesAtual, qMesAnt);
+  const dTaxa   = delta(taxaAtual, taxaAnt);
+  document.getElementById('evo-delta-mes').innerHTML    = `<span class="card-delta ${dMes.cls}">${dMes.txt}</span>`;
+  document.getElementById('evo-delta-quente').innerHTML = `<span class="card-delta ${dQuente.cls}">${dQuente.txt}</span>`;
+  document.getElementById('evo-delta-taxa').innerHTML   = `<span class="card-delta ${dTaxa.cls}">${dTaxa.txt}</span>`;
+
+  // ── Classificação no período ─────────────────────────────
+  const lf = filtrar(leads, periodoDias);
+  const q  = lf.filter(l => l.classificacao === 'quente').length;
+  const m  = lf.filter(l => l.classificacao === 'morno').length;
+  const f  = lf.filter(l => l.classificacao === 'frio').length;
+  const ct = q + m + f;
+  const sc = lf.length - ct;
+  const pctBase = n => lf.length > 0 ? Math.round(n / lf.length * 100) + '% do total' : '—';
+
+  document.getElementById('total-quente').textContent   = q;
+  document.getElementById('total-morno').textContent    = m;
+  document.getElementById('total-frio').textContent     = f;
+  document.getElementById('total-semclass').textContent = Math.max(0, sc);
+  document.getElementById('pct-quente').textContent     = pctBase(q);
+  document.getElementById('pct-morno').textContent      = pctBase(m);
+  document.getElementById('pct-frio').textContent       = pctBase(f);
+  document.getElementById('pct-semclass').textContent   = pctBase(Math.max(0, sc));
+  document.getElementById('total-class-sub').innerHTML  =
+    `Classificados: <strong>${ct}</strong> de <strong>${lf.length}</strong> leads no período · <strong>${Math.max(0,sc)}</strong> sem classificação`;
+
+  const pl = document.getElementById('periodo-label');
+  if (pl) pl.textContent = periodoDias ? `(últimos ${periodoDias} dias)` : '(todos os períodos)';
+  const pp = document.getElementById('pizza-periodo');
+  if (pp) pp.textContent = periodoDias ? `· últimos ${periodoDias}d` : '· todos';
+
+  // ── Lembretes — apenas leads ativos (não vendidos) ────────
+  // Nota: usa criado_em como proxy de último contato (campo não existe ainda no schema)
+  const ativos = leads.filter(l => l.status_negociacao !== 'vendido');
+  const f24 = ativos.filter(l => Date.now()-new Date(l.criado_em).getTime() > 86400000).length;
+  const f7d = ativos.filter(l => Date.now()-new Date(l.criado_em).getTime() > 7*86400000).length;
+  const fsc = leads.filter(l => !l.classificacao).length;
+
+  document.getElementById('f-24h').textContent     = f24;
+  document.getElementById('f-7d').textContent      = f7d;
+  document.getElementById('sem-class').textContent = fsc;
+
+  document.getElementById('card-f24').classList.toggle('alerta', f24 > 0);
+  document.getElementById('card-f7d').classList.toggle('alerta', f7d > 0);
+
+  // Badge na sidebar
+  const badge = document.getElementById('nav-badge');
+  badge.textContent = f24;
+  badge.className = 'nav-badge' + (f24 === 0 ? ' zero' : '');
+
+  // Alert strip
+  const stripWrap = document.getElementById('alert-strip-wrap');
+  if (f7d > 0) {
+    stripWrap.innerHTML = `<div class="alert-strip atencao">⚠ ${f7d} lead${f7d>1?'s':''} ativo${f7d>1?'s':''} sem contato há mais de 7 dias — risco de perda de oportunidade.</div>`;
+  } else if (f24 > 0) {
+    stripWrap.innerHTML = `<div class="alert-strip urgente">● ${f24} lead${f24>1?'s':''} aguardando retorno há mais de 24h.</div>`;
+  } else {
+    stripWrap.innerHTML = `<div class="alert-strip ok">✓ Nenhum lead urgente no momento. Continue assim!</div>`;
+  }
+
+  // Lista leads prioritários: ativos, ordenados pelos mais antigos, top 10
+  const lista  = document.getElementById('fu-lista');
+  const sorted = [...ativos].sort((a,b) => new Date(a.criado_em)-new Date(b.criado_em)).slice(0, 10);
+  lista.innerHTML = '';
+
+  const fuSub = document.getElementById('fu-sub');
+  fuSub.innerHTML = `${sorted.length} lead${sorted.length!==1?'s':''} ativo${sorted.length!==1?'s':''} com mais tempo sem contato · leads vendidos excluídos automaticamente`;
+
+  if (!sorted.length) {
+    lista.innerHTML = '<div class="empty">Nenhum lead ativo cadastrado ainda</div>';
+  } else {
+    sorted.forEach(l => renderLeadRow(l, lista));
+  }
+
+  // ── Progressão no funil (mês atual vs anterior) ─────────────
+  const negMesAtual  = leads.filter(l => new Date(l.criado_em) >= mes1 && l.status_negociacao === 'negociacao').length;
+  const negMesAnt    = leadsAnt.filter(l => l.status_negociacao === 'negociacao').length;
+  const vendMesAtual = leads.filter(l => new Date(l.criado_em) >= mes1 && l.status_negociacao === 'vendido').length;
+  const vendMesAnt   = leadsAnt.filter(l => l.status_negociacao === 'vendido').length;
+  const progAtual    = pMes    > 0 ? Math.round((negMesAtual + vendMesAtual) / pMes    * 100) : 0;
+  const progAnt      = pMesAnt > 0 ? Math.round((negMesAnt   + vendMesAnt)   / pMesAnt * 100) : 0;
+
+  document.getElementById('funil-neg-mes').textContent   = negMesAtual;
+  document.getElementById('funil-neg-sub').textContent   = `ant: ${negMesAnt} em negociação`;
+  document.getElementById('funil-vend-mes').textContent  = vendMesAtual;
+  document.getElementById('funil-vend-sub').textContent  = `ant: ${vendMesAnt} vendidos`;
+  document.getElementById('funil-taxa-prog').textContent = pMes > 0 ? progAtual + '%' : '—';
+  document.getElementById('funil-taxa-sub').textContent  = pMes > 0
+    ? `${negMesAtual + vendMesAtual} de ${pMes} saíram de busca`
+    : 'sem leads este mês';
+
+  const dNeg  = delta(negMesAtual,  negMesAnt);
+  const dVend = delta(vendMesAtual, vendMesAnt);
+  const dProg = delta(progAtual,    progAnt);
+  document.getElementById('funil-neg-delta').innerHTML   = `<span class="card-delta ${dNeg.cls}">${dNeg.txt}</span>`;
+  document.getElementById('funil-vend-delta').innerHTML  = `<span class="card-delta ${dVend.cls}">${dVend.txt}</span>`;
+  document.getElementById('funil-taxa-delta').innerHTML  = `<span class="card-delta ${dProg.cls}">${dProg.txt}</span>`;
+
+  renderPizza(q, m, f, Math.max(0, sc));
+  renderLinha(leads, periodoDias);
+  renderHistContato(leads);
+  renderVGV(leads);
+}
+
+// ── VGV ──────────────────────────────────────────────────────
+function renderVGV(leads) {
+  const c = cores();
+
+  // Pipeline: leads com ticket preenchido
+  const comTicket = leads.filter(l => l.ticket && Number(l.ticket) > 0);
+  const lBusca    = comTicket.filter(l => !l.status_negociacao || l.status_negociacao === 'busca');
+  const lNeg      = comTicket.filter(l => l.status_negociacao === 'negociacao');
+  const lVend     = comTicket.filter(l => l.status_negociacao === 'vendido');
+  const totalPipe = comTicket.length;
+
+  const vBusca = lBusca.reduce((s, l) => s + Number(l.ticket), 0);
+  const vNeg   = lNeg.reduce((s, l) => s + Number(l.ticket), 0);
+  const vReal  = lVend.reduce((s, l) => s + Number(l.ticket), 0);
+  const vTotal = vBusca + vNeg + vReal;
+
+  const ticketMedio = lVend.length > 0 ? vReal / lVend.length : 0;
+  const taxaConv    = totalPipe > 0 ? lVend.length / totalPipe * 100 : 0;
+
+  // KPIs
+  document.getElementById('kpi-vgv-total').textContent      = formatarVGV(vTotal);
+  document.getElementById('kpi-vgv-total-sub').textContent  = totalPipe > 0 ? `${totalPipe} lead${totalPipe !== 1 ? 's' : ''} com ticket` : 'nenhum ticket preenchido';
+  document.getElementById('kpi-vgv-real').textContent       = formatarVGV(vReal);
+  document.getElementById('kpi-vgv-real-sub').textContent   = `${lVend.length} venda${lVend.length !== 1 ? 's' : ''} fechada${lVend.length !== 1 ? 's' : ''}`;
+  document.getElementById('kpi-ticket-medio').textContent   = ticketMedio > 0 ? formatarVGV(Math.round(ticketMedio)) : '—';
+  document.getElementById('kpi-ticket-medio-sub').textContent = ticketMedio > 0 ? 'por venda realizada' : 'sem vendas ainda';
+  document.getElementById('kpi-taxa-conv').textContent      = taxaConv > 0 ? Math.round(taxaConv) + '%' : '—';
+  document.getElementById('kpi-taxa-conv-sub').textContent  = totalPipe > 0
+    ? `${lVend.length} vendidos de ${totalPipe} no pipeline`
+    : 'nenhum lead com ticket';
+
+  // KPI conversão quentes
+  const qTotal = leads.filter(l => l.classificacao === 'quente').length;
+  const qVend  = leads.filter(l => l.classificacao === 'quente' && l.status_negociacao === 'vendido').length;
+  const taxaQ  = qTotal > 0 ? Math.round(qVend / qTotal * 100) : 0;
+  document.getElementById('kpi-conv-quente').textContent    = qTotal > 0 ? taxaQ + '%' : '—';
+  document.getElementById('kpi-conv-quente-sub').textContent = qTotal > 0
+    ? `${qVend} vendidos de ${qTotal} quentes`
+    : 'sem leads quentes';
+
+  // Funil
+  const pctBN = (lNeg.length + lVend.length) > 0 && totalPipe > 0
+    ? Math.round((lNeg.length + lVend.length) / totalPipe * 100) : 0;
+  const pctNV = (lNeg.length + lVend.length) > 0
+    ? Math.round(lVend.length / (lNeg.length + lVend.length) * 100) : 0;
+
+  document.getElementById('fs-busca-n').textContent   = lBusca.length;
+  document.getElementById('fs-busca-vgv').textContent = formatarVGV(vBusca);
+  document.getElementById('fs-busca-pct').textContent = totalPipe > 0 ? Math.round(lBusca.length / totalPipe * 100) + '% do pipeline' : '—';
+  document.getElementById('fs-neg-n').textContent   = lNeg.length;
+  document.getElementById('fs-neg-vgv').textContent = formatarVGV(vNeg);
+  document.getElementById('fs-neg-pct').textContent = totalPipe > 0 ? Math.round(lNeg.length / totalPipe * 100) + '% do pipeline' : '—';
+
+  document.getElementById('fs-vend-n').textContent   = lVend.length;
+  document.getElementById('fs-vend-vgv').textContent = formatarVGV(vReal);
+  document.getElementById('fs-vend-pct').textContent = totalPipe > 0 ? Math.round(lVend.length / totalPipe * 100) + '% do pipeline' : '—';
+
+  // Setas com taxa
+  const cls1 = pctBN >= 40 ? 'up' : pctBN >= 20 ? 'mid' : 'low';
+  const cls2 = pctNV >= 40 ? 'up' : pctNV >= 20 ? 'mid' : 'low';
+  document.getElementById('fa-busca-neg').textContent  = pctBN + '%';
+  document.getElementById('fa-busca-neg').className    = 'funil-arrow-pct ' + cls1;
+  document.getElementById('fa-neg-vend').textContent   = pctNV + '%';
+  document.getElementById('fa-neg-vend').className     = 'funil-arrow-pct ' + cls2;
+
+  // Conversão por temperatura
+  const mTotal = leads.filter(l => l.classificacao === 'morno').length;
+  const mVend  = leads.filter(l => l.classificacao === 'morno' && l.status_negociacao === 'vendido').length;
+  const fTotal = leads.filter(l => l.classificacao === 'frio').length;
+  const fVend  = leads.filter(l => l.classificacao === 'frio'  && l.status_negociacao === 'vendido').length;
+  const taxaM  = mTotal > 0 ? Math.round(mVend / mTotal * 100) : 0;
+  const taxaF  = fTotal > 0 ? Math.round(fVend / fTotal * 100) : 0;
+
+  function setConvCard(pfx, vend, total, taxa, label) {
+    document.getElementById(`ct-${pfx}-rate`).textContent    = total > 0 ? taxa + '%' : '—';
+    document.getElementById(`ct-${pfx}-sub`).textContent     = total > 0
+      ? (taxa >= 30 ? '✓ boa conversão' : taxa > 0 ? 'conversão baixa' : 'sem vendas')
+      : 'sem leads ' + label;
+    document.getElementById(`ct-${pfx}-vend-n`).textContent  = vend + (vend === 1 ? ' venda' : ' vendas');
+    document.getElementById(`ct-${pfx}-total-n`).textContent = 'de ' + total + ' ' + label;
+    document.getElementById(`ct-${pfx}-bar`).style.width     = taxa + '%';
+  }
+  setConvCard('q', qVend, qTotal, taxaQ, 'quentes');
+  setConvCard('m', mVend, mTotal, taxaM, 'mornos');
+  setConvCard('f', fVend, fTotal, taxaF, 'frios');
+
+  document.getElementById('conv-temp-sub').innerHTML =
+    `Quentes: <strong>${taxaQ}%</strong> · Mornos: <strong>${taxaM}%</strong> · Frios: <strong>${taxaF}%</strong>`
+    + (taxaQ > taxaM && taxaQ > taxaF
+      ? ' · <strong style="color:var(--green)">✓ Qualificação validada — quentes convertem mais</strong>'
+      : taxaM > taxaQ
+      ? ' · <strong style="color:var(--morno)">⚠ Mornos convertendo mais que quentes — revisar critério de classificação</strong>'
+      : '');
+
+  // Ciclo médio de venda
+  const vendidosCom = leads.filter(l => l.status_negociacao === 'vendido' && l.criado_em);
+  if (vendidosCom.length > 0) {
+    const idades = vendidosCom
+      .map(l => Math.floor((Date.now() - new Date(l.criado_em).getTime()) / 86400000))
+      .sort((a, b) => a - b);
+    const mid = Math.floor(idades.length / 2);
+    const mediana = idades.length % 2 === 0 ? Math.round((idades[mid-1] + idades[mid]) / 2) : idades[mid];
+    document.getElementById('kpi-ciclo-venda').textContent = mediana + 'd';
+    document.getElementById('kpi-ciclo-sub').textContent   = `mediana de ${vendidosCom.length} venda${vendidosCom.length > 1 ? 's' : ''} · mín ${idades[0]}d · máx ${idades[idades.length-1]}d`;
+  } else {
+    document.getElementById('kpi-ciclo-venda').textContent = '—';
+    document.getElementById('kpi-ciclo-sub').textContent   = 'sem vendas fechadas ainda';
+  }
+
+  // Lead mais antigo em negociação
+  const negAtivos = leads.filter(l => l.status_negociacao === 'negociacao');
+  if (negAtivos.length > 0) {
+    const maisAntigo = negAtivos.reduce((a, b) => new Date(a.criado_em) < new Date(b.criado_em) ? a : b);
+    const diasNeg = Math.floor((Date.now() - new Date(maisAntigo.criado_em).getTime()) / 86400000);
+    document.getElementById('kpi-neg-antigo').textContent     = diasNeg + 'd';
+    document.getElementById('kpi-neg-antigo-sub').textContent = `${maisAntigo.nome} · ${negAtivos.length} lead${negAtivos.length > 1 ? 's' : ''} em negociação`;
+  } else {
+    document.getElementById('kpi-neg-antigo').textContent     = '—';
+    document.getElementById('kpi-neg-antigo-sub').textContent = 'nenhum em negociação';
+  }
+
+  // Health strip
+  const strip = document.getElementById('vgv-health-strip');
+  if (totalPipe === 0) {
+    strip.innerHTML = `<div class="alert-strip atencao">◎ Nenhum lead com valor de imóvel preenchido ainda. Registre o ticket dos leads para ativar esta análise.</div>`;
+  } else if (lVend.length === 0) {
+    strip.innerHTML = `<div class="alert-strip atencao">◎ Pipeline ativo com ${formatarVGV(vTotal)} em jogo — ainda sem vendas fechadas. Foco em converter negociações.</div>`;
+  } else if (vNeg > vReal * 1.5 && lNeg.length > 2) {
+    strip.innerHTML = `<div class="alert-strip atencao">⚠ ${formatarVGV(vNeg)} represados em negociação — alto risco de perda. Priorize fechar ${lNeg.length} negócio${lNeg.length > 1 ? 's' : ''} em andamento.</div>`;
+  } else {
+    strip.innerHTML = `<div class="alert-strip ok">✓ Pipeline saudável · ${formatarVGV(vReal)} realizados · ${lVend.length} venda${lVend.length !== 1 ? 's' : ''} fechada${lVend.length !== 1 ? 's' : ''}</div>`;
+  }
+
+  // Gráfico: VGV por status
+  const ctxBar = document.getElementById('chart-vgv-status').getContext('2d');
+  if (chartVgvBar) chartVgvBar.destroy();
+  chartVgvBar = new Chart(ctxBar, {
+    type: 'bar',
+    data: {
+      labels: ['Em Busca', 'Em Negociação', 'Vendido'],
+      datasets: [{
+        label: 'VGV (R$)',
+        data: [vBusca, vNeg, vReal],
+        backgroundColor: [c.frio + '80', c.morno + '80', c.green + '80'],
+        borderColor:     [c.frio,         c.morno,         c.green],
+        borderWidth: 1, borderRadius: 6
+      }]
+    },
+    options: {
+      indexAxis: 'y',
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: { callbacks: { label: ctx => ' ' + formatarVGV(ctx.parsed.x) } }
+      },
+      scales: {
+        x: { ticks: { color: c.tick, font: { size: 10 }, callback: v => formatarVGV(v) }, grid: { color: c.grid2 } },
+        y: { ticks: { color: c.tick, font: { size: 11 } }, grid: { color: c.grid } }
+      }
+    }
+  });
+
+  // Gráfico: Ticket médio por temperatura
+  const tickQVend  = leads.filter(l => l.classificacao === 'quente' && l.status_negociacao === 'vendido' && l.ticket);
+  const tickMVend  = leads.filter(l => l.classificacao === 'morno'  && l.status_negociacao === 'vendido' && l.ticket);
+  const tickFVend  = leads.filter(l => l.classificacao === 'frio'   && l.status_negociacao === 'vendido' && l.ticket);
+  const avgQ = tickQVend.length > 0 ? tickQVend.reduce((s, l) => s + Number(l.ticket), 0) / tickQVend.length : 0;
+  const avgM = tickMVend.length > 0 ? tickMVend.reduce((s, l) => s + Number(l.ticket), 0) / tickMVend.length : 0;
+  const avgF = tickFVend.length > 0 ? tickFVend.reduce((s, l) => s + Number(l.ticket), 0) / tickFVend.length : 0;
+
+  const ctxTick = document.getElementById('chart-ticket-temp').getContext('2d');
+  if (chartTicket) chartTicket.destroy();
+  chartTicket = new Chart(ctxTick, {
+    type: 'bar',
+    data: {
+      labels: ['Quente', 'Morno', 'Frio'],
+      datasets: [{
+        label: 'Ticket Médio',
+        data: [Math.round(avgQ), Math.round(avgM), Math.round(avgF)],
+        backgroundColor: [c.quente + '80', c.morno + '80', c.frio + '80'],
+        borderColor:     [c.quente,         c.morno,         c.frio],
+        borderWidth: 1, borderRadius: 6
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: { callbacks: { label: ctx => ' ' + formatarVGV(ctx.parsed.y) } }
+      },
+      scales: {
+        x: { ticks: { color: c.tick, font: { size: 11 } }, grid: { color: c.grid2 } },
+        y: { ticks: { color: c.tick, font: { size: 10 }, callback: v => formatarVGV(v) }, grid: { color: c.grid }, beginAtZero: true }
+      }
+    }
+  });
+}
+
+// ── Gráficos ─────────────────────────────────────────────────
+function isLight() { return window.matchMedia('(prefers-color-scheme: light)').matches; }
+
+const CORES = {
+  dark:  { quente:'#FF4D4D', morno:'#FF9500', frio:'#4D9EFF', green:'#69CD5A',
+           sc:'rgba(255,255,255,0.22)', legend:'rgba(255,255,255,0.5)',
+           tick:'rgba(255,255,255,0.3)', grid:'rgba(255,255,255,0.05)', grid2:'rgba(255,255,255,0.03)' },
+  light: { quente:'#cc2222', morno:'#c46800', frio:'#1a6fd4', green:'#1a9d44',
+           sc:'rgba(0,0,0,0.18)', legend:'rgba(0,0,0,0.5)',
+           tick:'rgba(0,0,0,0.35)', grid:'rgba(0,0,0,0.06)', grid2:'rgba(0,0,0,0.04)' }
+};
+function cores() { return isLight() ? CORES.light : CORES.dark; }
+
+function renderPizza(q, m, f, sc) {
+  const ctx = document.getElementById('chart-pizza').getContext('2d');
+  if (chartPizza) chartPizza.destroy();
+  const c = cores();
+  chartPizza = new Chart(ctx, {
+    type: 'doughnut',
+    data: {
+      labels: ['Quente','Morno','Frio','Sem class.'],
+      datasets: [{ data:[q,m,f,sc], backgroundColor:[c.quente,c.morno,c.frio,c.sc], borderWidth:0, hoverOffset:8 }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false, cutout: '68%',
+      plugins: {
+        legend: { position:'bottom', labels:{ color:c.legend, font:{size:11,family:'Inter'}, padding:16, boxWidth:10, boxHeight:10 } },
+        tooltip: {
+          callbacks: {
+            label: ctx => {
+              const tot = ctx.dataset.data.reduce((a,b)=>a+b,0);
+              const pct = tot > 0 ? Math.round(ctx.parsed/tot*100) : 0;
+              return ` ${ctx.label}: ${ctx.parsed} (${pct}%)`;
+            }
+          }
+        }
+      }
+    }
+  });
+}
+
+function renderLinha(leads, dias) {
+  const ctx = document.getElementById('chart-linha').getContext('2d');
+  if (chartLinha) chartLinha.destroy();
+  const c = cores();
+
+  // Para "Tudo": calcula range real a partir do lead mais antigo (máx 365 dias)
+  let diasEfetivos = dias;
+  if (!dias) {
+    if (leads.length === 0) {
+      diasEfetivos = 30;
+    } else {
+      const oldest = [...leads].sort((a,b) => new Date(a.criado_em)-new Date(b.criado_em))[0];
+      diasEfetivos = Math.min(365, Math.ceil((Date.now()-new Date(oldest.criado_em).getTime())/86400000)+1);
+    }
+  }
+
+  const linhaPeriodo = document.getElementById('linha-periodo');
+  // Agrupar por semana quando período > 60 dias para evitar excesso de labels
+  const porSemana = diasEfetivos > 60;
+  const labels = [], vals = [];
+
+  if (porSemana) {
+    if (linhaPeriodo) linhaPeriodo.textContent = `· por semana (${diasEfetivos}d)`;
+    const semanas = Math.ceil(diasEfetivos / 7);
+    for (let i = semanas-1; i >= 0; i--) {
+      const fim = new Date(); fim.setDate(fim.getDate()-i*7); fim.setHours(23,59,59,999);
+      const ini = new Date(fim); ini.setDate(fim.getDate()-6); ini.setHours(0,0,0,0);
+      labels.push(ini.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'}));
+      vals.push(leads.filter(l => { const dt=new Date(l.criado_em); return dt>=ini&&dt<=fim; }).length);
+    }
+  } else {
+    if (linhaPeriodo) linhaPeriodo.textContent = '';
+    for (let i = diasEfetivos-1; i >= 0; i--) {
+      const d = new Date(); d.setDate(d.getDate()-i); d.setHours(0,0,0,0);
+      const fim = new Date(d); fim.setHours(23,59,59,999);
+      labels.push(d.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'}));
+      vals.push(leads.filter(l => { const dt=new Date(l.criado_em); return dt>=d&&dt<=fim; }).length);
+    }
+  }
+
+  chartLinha = new Chart(ctx, {
+    type: 'line',
+    data: { labels, datasets: [{
+      label: porSemana ? 'Leads/semana' : 'Leads/dia',
+      data: vals,
+      borderColor: c.green, backgroundColor: 'rgba(105,205,90,0.08)',
+      fill: true, tension: 0.4, pointRadius: 3,
+      pointBackgroundColor: c.green, pointBorderWidth: 0, borderWidth: 2
+    }]},
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { ticks:{color:c.tick,font:{size:10},maxTicksLimit:12}, grid:{color:c.grid2} },
+        y: { ticks:{color:c.tick,font:{size:10},stepSize:1}, grid:{color:c.grid}, beginAtZero:true }
+      }
+    }
+  });
+}
+
+function renderHistContato(leads) {
+  const c = cores();
+  const ativos = leads.filter(l => l.status_negociacao !== 'vendido');
+  const agora  = Date.now();
+
+  const buckets = [
+    { label: '0 – 1 dia',   min: 0,  max: 1,    cor: c.green },
+    { label: '1 – 3 dias',  min: 1,  max: 3,    cor: isLight() ? '#6b8000' : '#D6F04F' },
+    { label: '3 – 7 dias',  min: 3,  max: 7,    cor: c.morno },
+    { label: '7 – 15 dias', min: 7,  max: 15,   cor: c.quente },
+    { label: '15d+',        min: 15, max: 99999, cor: c.quente },
+  ];
+
+  const counts = buckets.map(b =>
+    ativos.filter(l => {
+      const dias = (agora - new Date(l.criado_em).getTime()) / 86400000;
+      return dias >= b.min && dias < b.max;
+    }).length
+  );
+
+  const ctx = document.getElementById('chart-hist-contato').getContext('2d');
+  if (chartHistContato) chartHistContato.destroy();
+  chartHistContato = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: buckets.map(b => b.label),
+      datasets: [{
+        data: counts,
+        backgroundColor: buckets.map(b => b.cor + '80'),
+        borderColor:     buckets.map(b => b.cor),
+        borderWidth: 1, borderRadius: 6
+      }]
+    },
+    options: {
+      indexAxis: 'y',
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: { callbacks: { label: ctx => ` ${ctx.parsed.x} lead${ctx.parsed.x !== 1 ? 's' : ''}` } }
+      },
+      scales: {
+        x: { ticks: { color: c.tick, font: { size: 10 }, stepSize: 1 }, grid: { color: c.grid2 }, beginAtZero: true },
+        y: { ticks: { color: c.tick, font: { size: 11 } }, grid: { color: c.grid } }
+      }
+    }
+  });
+}
+
+window.matchMedia('(prefers-color-scheme: light)').addEventListener('change', () => {
+  const c = cores();
+  if (chartPizza) {
+    chartPizza.data.datasets[0].backgroundColor[3] = c.sc;
+    chartPizza.options.plugins.legend.labels.color  = c.legend;
+    chartPizza.update('none');
+  }
+  if (chartHistContato) { if (todosLeads.length) renderHistContato(todosLeads); }
+  if (chartVgvBar) { if (todosLeads.length) renderVGV(todosLeads); }
+  if (chartTicket)  { /* rebuilt inside renderVGV */ }
+  if (chartLinha) {
+    chartLinha.data.datasets[0].borderColor          = c.green;
+    chartLinha.data.datasets[0].pointBackgroundColor = c.green;
+    chartLinha.options.scales.x.ticks.color = c.tick;
+    chartLinha.options.scales.y.ticks.color = c.tick;
+    chartLinha.options.scales.x.grid.color  = c.grid2;
+    chartLinha.options.scales.y.grid.color  = c.grid;
+    chartLinha.update('none');
+  }
+});
+
+// ── Filtro de período ────────────────────────────────────────
+function setPeriodo(dias, btn) {
+  periodoDias = dias;
+  document.querySelectorAll('.period-tab').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  if (todosLeads.length > 0) renderDados(todosLeads);
+}
+
+// ── Carregamento ─────────────────────────────────────────────
+async function carregarDados() {
+  if (!currentUid || !dashJwt) return;
+  setLoading(true);
+  document.getElementById('status-text').textContent = 'Sincronizando...';
+  try {
+    todosLeads = await fetchLeads(currentUid, dashJwt);
+    renderDados(todosLeads);
+    document.getElementById('sub-texto').textContent =
+      `${todosLeads.length} leads · atualizado às ${new Date().toLocaleTimeString('pt-BR')}`;
+    document.getElementById('status-text').textContent = 'Conectado';
+  } catch(e) {
+    document.getElementById('status-text').textContent = 'Erro de conexão';
+    document.getElementById('sub-texto').textContent = 'Não foi possível atualizar';
+  }
+  setLoading(false);
+}
+
+// ── Inicialização ────────────────────────────────────────────
+window.onload = () => { initDashAuth(); };
+</script>
+</body>
+</html>
