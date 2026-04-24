@@ -816,6 +816,9 @@ async function initWithJwt(jwt, uid, email) {
 }
 
 let recoveryToken = null;
+let recoveryRefreshToken = null;
+let recoveryExpiresAt = null;
+let recoveryExtId = null;
 
 async function initDashAuth() {
   const authScreen = document.getElementById('auth-screen');
@@ -826,7 +829,10 @@ async function initDashAuth() {
   if (window.location.hash) {
     const hash = new URLSearchParams(window.location.hash.slice(1));
     if (hash.get('type') === 'recovery' && hash.get('access_token')) {
-      recoveryToken = hash.get('access_token');
+      recoveryToken        = hash.get('access_token');
+      recoveryRefreshToken = hash.get('refresh_token') || '';
+      recoveryExpiresAt    = hash.get('expires_at') ? parseInt(hash.get('expires_at')) * 1000 : Date.now() + 3600000;
+      recoveryExtId        = new URLSearchParams(window.location.search).get('ext_id') || null;
       history.replaceState({}, '', window.location.pathname);
       showAuthCard('auth-reset-card');
       return;
@@ -1007,11 +1013,27 @@ document.getElementById('btn-auth-reset-save').addEventListener('click', async (
       body: JSON.stringify({ password: pwd })
     });
     if (!r.ok) { const d = await r.json(); throw new Error(d.error_description || 'Erro ao salvar senha.'); }
-    recoveryToken = null;
+    const userData = await r.json();
+
+    if (recoveryExtId && typeof chrome !== 'undefined' && chrome.runtime) {
+      const session = {
+        access_token:  recoveryToken,
+        refresh_token: recoveryRefreshToken,
+        expires_at:    recoveryExpiresAt,
+        user_id:       userData.id,
+        email:         userData.email
+      };
+      try { chrome.runtime.sendMessage(recoveryExtId, { type: 'SET_SESSION', session }); } catch (_) {}
+    }
+
+    const veioDeExtensao = !!recoveryExtId;
+    recoveryToken = recoveryRefreshToken = recoveryExpiresAt = recoveryExtId = null;
     showAuthCard('auth-login-card');
     document.getElementById('auth-error').textContent = '';
     document.getElementById('auth-error').style.color = 'var(--green)';
-    document.getElementById('auth-error').textContent = '✓ Senha redefinida! Faça login com a nova senha.';
+    document.getElementById('auth-error').textContent = veioDeExtensao
+      ? '✓ Senha redefinida! Você já está logado na extensão.'
+      : '✓ Senha redefinida! Faça login com a nova senha.';
   } catch (e) {
     showAuthCard('auth-reset-card');
     errEl.textContent = e.message;
