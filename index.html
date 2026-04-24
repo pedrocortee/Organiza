@@ -906,6 +906,9 @@ document.getElementById('btn-auth-login').addEventListener('click', async () => 
   try {
     const data = await dashApiAuth('token?grant_type=password', { email, password: pwd });
     const session = saveAuthSession(data);
+    if (typeof chrome !== 'undefined' && chrome.runtime && EXTENSION_ID.trim()) {
+      try { chrome.runtime.sendMessage(EXTENSION_ID.trim(), { type: 'SET_SESSION', session }); } catch (_) {}
+    }
     await initWithJwt(session.access_token, session.user_id, session.email);
   } catch (e) {
     showAuthCard('auth-login-card');
@@ -1015,7 +1018,7 @@ document.getElementById('btn-auth-reset-save').addEventListener('click', async (
     if (!r.ok) { const d = await r.json(); throw new Error(d.error_description || 'Erro ao salvar senha.'); }
     const userData = await r.json();
 
-    if (recoveryExtId && typeof chrome !== 'undefined' && chrome.runtime) {
+    if (typeof chrome !== 'undefined' && chrome.runtime) {
       const session = {
         access_token:  recoveryToken,
         refresh_token: recoveryRefreshToken,
@@ -1023,7 +1026,8 @@ document.getElementById('btn-auth-reset-save').addEventListener('click', async (
         user_id:       userData.id,
         email:         userData.email
       };
-      try { chrome.runtime.sendMessage(recoveryExtId, { type: 'SET_SESSION', session }); } catch (_) {}
+      const targetId = recoveryExtId || EXTENSION_ID.trim();
+      if (targetId) try { chrome.runtime.sendMessage(targetId, { type: 'SET_SESSION', session }); } catch (_) {}
     }
 
     const veioDeExtensao = !!recoveryExtId;
