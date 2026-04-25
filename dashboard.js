@@ -1,6 +1,3 @@
-const SUPABASE_URL = 'https://tkxvbuzykfnoxiyeoams.supabase.co';
-const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRreHZidXp5a2Zub3hpeWVvYW1zIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUxNjczMzMsImV4cCI6MjA5MDc0MzMzM30.eUpA1ZR-h-4j0XOXhoHYXC98ESPtekWDsON5HYCtq30';
-
 let periodoDias = 7;
 let chartPizza = null;
 let chartLinha = null;
@@ -21,42 +18,26 @@ function setLoading(on) {
 }
 
 async function resolveAuth() {
-  // 1. Contexto da extensão — chrome.storage
   try {
     if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
       const result = await new Promise(resolve =>
         chrome.storage.local.get(['auth_session'], r => resolve(r))
       );
       if (result.auth_session?.user_id) {
-        return { profileId: result.auth_session.user_id, jwt: result.auth_session.access_token };
+        return { profileId: result.auth_session.user_id };
       }
     }
   } catch(e) {}
-
-  // 2. URL params — ?token= (JWT enviado pela extensão ao abrir o dashboard)
-  const token = new URLSearchParams(window.location.search).get('token');
-  if (token) {
-    try {
-      const r = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
-        headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${token}` }
-      });
-      if (r.ok) {
-        const user = await r.json();
-        return { profileId: user.id, jwt: token };
-      }
-    } catch(e) {}
-  }
-
-  return { profileId: null, jwt: null };
+  return { profileId: null };
 }
 
-async function fetchLeads(profileId, jwt) {
-  const res = await fetch(
-    `${SUPABASE_URL}/rest/v1/leads?profile_id=eq.${encodeURIComponent(profileId)}&order=criado_em.desc`,
-    { headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${jwt}` } }
-  );
-  if (!res.ok) throw new Error('Erro ' + res.status);
-  return res.json();
+async function fetchLeads() {
+  return new Promise((resolve, reject) => {
+    chrome.runtime.sendMessage({ type: 'FETCH_LEADS' }, (resp) => {
+      if (resp?.ok) resolve(resp.data);
+      else reject(new Error('Erro ao carregar leads'));
+    });
+  });
 }
 
 function filtrar(leads, dias) {
@@ -218,14 +199,14 @@ async function carregarDados() {
   setLoading(true);
   document.getElementById('status-text').textContent = 'Sincronizando...';
   try {
-    const { profileId, jwt } = await resolveAuth();
+    const { profileId } = await resolveAuth();
     if (!profileId) {
       document.getElementById('status-text').textContent = 'Não autenticado';
       document.getElementById('sub-texto').textContent = 'Faça login na extensão para visualizar seus leads';
       setLoading(false);
       return;
     }
-    todosLeads = await fetchLeads(profileId, jwt);
+    todosLeads = await fetchLeads();
     renderDados(todosLeads);
     document.getElementById('sub-texto').textContent = `${todosLeads.length} leads · atualizado às ${new Date().toLocaleTimeString('pt-BR')}`;
     document.getElementById('status-text').textContent = 'Conectado';
@@ -238,3 +219,10 @@ async function carregarDados() {
 window.carregarDados = carregarDados;
 
 window.onload = carregarDados;
+
+// ── Logout ─────────────────────────────────────────────────────
+function dashLogout() {
+  chrome.runtime.sendMessage({ type: 'SIGN_OUT' });
+  chrome.storage.local.remove(['auth_session', 'extensao_user_id', 'leads', 'classificacoes', 'leadTimestamps', 'leadSnoozed', 'leadQualificacoes']);
+}
+window.dashLogout = dashLogout;
