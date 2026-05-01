@@ -698,7 +698,7 @@
 <script>
 const SUPABASE_URL = 'https://tkxvbuzykfnoxiyeoams.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRreHZidXp5a2Zub3hpeWVvYW1zIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUxNjczMzMsImV4cCI6MjA5MDc0MzMzM30.eUpA1ZR-h-4j0XOXhoHYXC98ESPtekWDsON5HYCtq30';
-const EXTENSION_ID = ' jpdkjncfcnifeddpopfdegbkbckkimgd';
+const EXTENSION_ID = 'jpdkjncfcnifeddpopfdegbkbckkimgd';
 
 let periodoDias       = 7;
 let chartPizza        = null;
@@ -928,7 +928,10 @@ async function initDashAuth() {
 
   // 2. Tentar obter sessão da extensão instalada (aberto via botão "Acessar painel")
   try {
-    const extId = EXTENSION_ID.trim();
+    const urlParams = new URLSearchParams(window.location.search);
+    const extIdFromUrl = urlParams.get('ext_id');
+    const extId = extIdFromUrl || EXTENSION_ID;
+    if (extIdFromUrl) history.replaceState({}, '', window.location.pathname);
     if (typeof chrome !== 'undefined' && chrome.runtime && extId) {
       const resp = await new Promise(resolve => {
         chrome.runtime.sendMessage(extId, { type: 'GET_SESSION' }, r => {
