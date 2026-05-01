@@ -345,6 +345,12 @@
       <button class="auth-btn" id="btn-auth-reset-save">Salvar nova senha</button>
     </div>
 
+    <!-- Sem sessão (contexto extensão) -->
+    <div class="auth-card" id="auth-nosession-card" style="display:none">
+      <div class="logo-name" style="font-size:20px;margin-bottom:4px"><span class="g">Organiza</span><span class="d">.</span></div>
+      <div class="auth-sub" style="text-align:center;margin-top:8px">Para acessar o painel, faça login pela extensão no ícone do WhatsApp Web.</div>
+    </div>
+
     <!-- Loading -->
     <div id="auth-loading-card" style="display:none;text-align:center;padding:40px 0">
       <div class="auth-spinner"></div>
@@ -712,8 +718,9 @@ const SUPABASE_KEY_DASH = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 let dashJwt = null;
 
 function showAuthCard(id, loadingMsg) {
-  ['auth-login-card','auth-signup-card','auth-forgot-card','auth-reset-card','auth-loading-card','auth-block-card'].forEach(c => {
-    document.getElementById(c).style.display = c === id ? '' : 'none';
+  ['auth-login-card','auth-signup-card','auth-forgot-card','auth-reset-card','auth-loading-card','auth-block-card','auth-nosession-card'].forEach(c => {
+    const el = document.getElementById(c);
+    if (el) el.style.display = c === id ? '' : 'none';
   });
   if (id === 'auth-loading-card' && loadingMsg) {
     document.getElementById('auth-loading-msg').textContent = loadingMsg;
@@ -825,7 +832,68 @@ async function initDashAuth() {
   authScreen.classList.add('visible');
   showAuthCard('auth-loading-card', 'Verificando sessão...');
 
-  // 0. Check for password recovery token in URL hash (#type=recovery&access_token=...)
+  const isExtPage = window.location.protocol === 'chrome-extension:';
+
+  if (isExtPage) {
+    // Contexto extensão: usa apenas chrome.storage, sem formulário de login próprio
+
+    // 1. Token via chrome.storage.session (aberto pelo botão "Abrir painel" do popup)
+    try {
+      if (typeof chrome !== 'undefined' && chrome.storage?.session) {
+        const stored = await new Promise(r => chrome.storage.session.get(['dash_token'], r));
+        if (stored.dash_token) {
+          const token = stored.dash_token;
+          await chrome.storage.session.remove('dash_token');
+          const r = await fetch(`${SUPABASE_URL_DASH}/auth/v1/user`, {
+            headers: { 'apikey': SUPABASE_KEY_DASH, 'Authorization': `Bearer ${token}` }
+          });
+          if (r.ok) {
+            const user = await r.json();
+            await initWithJwt(token, user.id, user.email);
+            return;
+          }
+        }
+      }
+    } catch {}
+
+    // 2. Sessão em chrome.storage.local (usuário já logado no popup)
+    try {
+      if (typeof chrome !== 'undefined' && chrome.storage?.local) {
+        const stored = await new Promise(r => chrome.storage.local.get(['auth_session'], r));
+        const s = stored.auth_session;
+        if (s?.access_token) {
+          if (s.expires_at > Date.now() + 60000) {
+            await initWithJwt(s.access_token, s.user_id, s.email);
+            return;
+          }
+          if (s.refresh_token) {
+            showAuthCard('auth-loading-card', 'Renovando sessão...');
+            const refreshed = await refreshAuthSession(s);
+            if (refreshed) {
+              const newSession = {
+                access_token:  refreshed.access_token,
+                refresh_token: refreshed.refresh_token,
+                user_id:       refreshed.user?.id || s.user_id,
+                email:         refreshed.user?.email || s.email,
+                expires_at:    Date.now() + (refreshed.expires_in || 3600) * 1000
+              };
+              chrome.storage.local.set({ auth_session: newSession });
+              await initWithJwt(newSession.access_token, newSession.user_id, newSession.email);
+              return;
+            }
+          }
+        }
+      }
+    } catch {}
+
+    // Sem sessão: orientar o usuário a logar pela extensão
+    showAuthCard('auth-nosession-card');
+    return;
+  }
+
+  // Contexto externo (Netlify): fluxo completo de auth
+
+  // 0. Token de recuperação de senha na URL hash (#type=recovery&access_token=...)
   if (window.location.hash) {
     const hash = new URLSearchParams(window.location.hash.slice(1));
     if (hash.get('type') === 'recovery' && hash.get('access_token')) {
@@ -839,40 +907,7 @@ async function initDashAuth() {
     }
   }
 
-  // 1. Token passed via chrome.storage.session (extension page context)
-  try {
-    if (typeof chrome !== 'undefined' && chrome.storage?.session) {
-      const stored = await new Promise(r => chrome.storage.session.get(['dash_token'], r));
-      if (stored.dash_token) {
-        const token = stored.dash_token;
-        await chrome.storage.session.remove('dash_token');
-        const r = await fetch(`${SUPABASE_URL_DASH}/auth/v1/user`, {
-          headers: { 'apikey': SUPABASE_KEY_DASH, 'Authorization': `Bearer ${token}` }
-        });
-        if (r.ok) {
-          const user = await r.json();
-          const fakeSession = { access_token: token, refresh_token: '', user_id: user.id, email: user.email, expires_at: Date.now() + 3600000 };
-          sessionStorage.setItem('organiza_session', JSON.stringify(fakeSession));
-          await initWithJwt(token, user.id, user.email);
-          return;
-        }
-      }
-    }
-  } catch {}
-
-  // 1b. Session in chrome.storage.local (extension page, user already logged in)
-  try {
-    if (typeof chrome !== 'undefined' && chrome.storage?.local) {
-      const stored = await new Promise(r => chrome.storage.local.get(['auth_session'], r));
-      const s = stored.auth_session;
-      if (s?.access_token && s.expires_at > Date.now() + 60000) {
-        await initWithJwt(s.access_token, s.user_id, s.email);
-        return;
-      }
-    }
-  } catch {}
-
-  // 2. Check stored session
+  // 1. Sessão salva no sessionStorage
   let session = getAuthSession();
   if (session) {
     if (session.expires_at < Date.now() + 60000) {
@@ -891,7 +926,25 @@ async function initDashAuth() {
     }
   }
 
-  // 4. Show login
+  // 2. Tentar obter sessão da extensão instalada (aberto via botão "Acessar painel")
+  try {
+    const extId = EXTENSION_ID.trim();
+    if (typeof chrome !== 'undefined' && chrome.runtime && extId) {
+      const resp = await new Promise(resolve => {
+        chrome.runtime.sendMessage(extId, { type: 'GET_SESSION' }, r => {
+          resolve(chrome.runtime.lastError ? null : r);
+        });
+      });
+      if (resp?.session) {
+        const s = resp.session;
+        sessionStorage.setItem('organiza_session', JSON.stringify(s));
+        await initWithJwt(s.access_token, s.user_id, s.email);
+        return;
+      }
+    }
+  } catch {}
+
+  // 3. Mostrar login
   showAuthCard('auth-login-card');
 }
 
@@ -901,7 +954,13 @@ function dashLogout() {
   sessionStorage.removeItem('organiza_session');
   document.getElementById('main-content').style.display = 'none';
   document.getElementById('auth-screen').classList.add('visible');
-  showAuthCard('auth-login-card');
+  const isExtPage = window.location.protocol === 'chrome-extension:';
+  if (isExtPage && typeof chrome !== 'undefined' && chrome.runtime) {
+    chrome.runtime.sendMessage({ type: 'SIGN_OUT' });
+    showAuthCard('auth-nosession-card');
+  } else {
+    showAuthCard('auth-login-card');
+  }
 }
 
 // ── Auth form handlers ───────────────────────────────────────
