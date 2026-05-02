@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Política de Privacidade — Organiza</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #0f141a;
+      color: #e2e8f0;
+      line-height: 1.7;
+      padding: 0 16px;
+    }
+    header {
+      background: #151C24;
+      border-bottom: 1px solid #1e2b39;
+      padding: 20px 0;
+      text-align: center;
+    }
+    .logo-text { font-size: 24px; font-weight: 700; color: #69CD5A; letter-spacing: -0.5px; }
+    .logo-dot  { color: #D6F04F; }
+    main { max-width: 760px; margin: 48px auto 80px; }
+    h1 { font-size: 28px; font-weight: 700; color: #ffffff; margin-bottom: 8px; }
+    .subtitle { color: #94a3b8; font-size: 14px; margin-bottom: 40px; }
+    h2 {
+      font-size: 18px; font-weight: 600; color: #69CD5A;
+      margin: 36px 0 12px; padding-bottom: 6px; border-bottom: 1px solid #1e2b39;
+    }
+    p { margin-bottom: 14px; color: #cbd5e1; font-size: 15px; }
+    ul, ol { margin: 0 0 14px 24px; color: #cbd5e1; font-size: 15px; }
+    li { margin-bottom: 6px; }
+    table { width: 100%; border-collapse: collapse; margin: 16px 0 24px; font-size: 14px; }
+    th, td { padding: 10px 14px; border: 1px solid #1e2b39; text-align: left; color: #cbd5e1; }
+    th { background: #151C24; color: #94a3b8; font-weight: 600; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px; }
+    tr:nth-child(even) td { background: #151C24; }
+    .highlight-box {
+      background: #151C24; border: 1px solid #69CD5A33; border-left: 3px solid #69CD5A;
+      border-radius: 6px; padding: 16px 20px; margin: 16px 0 24px;
+    }
+    .highlight-box p { margin-bottom: 0; color: #94a3b8; font-size: 14px; }
+    .highlight-box strong { color: #69CD5A; }
+    a { color: #69CD5A; text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    footer { text-align: center; color: #475569; font-size: 13px; padding: 32px 0; border-top: 1px solid #1e2b39; max-width: 760px; margin: 0 auto; }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="logo-text">Organiza<span class="logo-dot">.</span></div>
+</header>
+
+<main>
+  <h1>Política de Privacidade</h1>
+  <p class="subtitle">Última atualização: maio de 2026 &nbsp;·&nbsp; Versão 1.0</p>
+
+  <div class="highlight-box">
+    <p>
+      <strong>Resumo:</strong> A Organiza coleta apenas os dados necessários para que você gerencie seus leads no WhatsApp Web.
+      Seus dados nunca são usados para publicidade, nunca são vendidos e nunca são compartilhados com terceiros para fins comerciais.
+    </p>
+  </div>
+
+  <h2>1. Quem somos</h2>
+  <p>
+    A <strong>Organiza</strong> é uma extensão para Google Chrome desenvolvida por Pedro Pires de La Corte
+    (<a href="mailto:pedropiresdelacorte03@gmail.com">pedropiresdelacorte03@gmail.com</a>), com sede no Brasil.
+    Esta Política de Privacidade descreve como coletamos, usamos, armazenamos e protegemos suas informações ao utilizar a extensão Organiza.
+  </p>
+  <p>
+    Para fins da Lei Geral de Proteção de Dados (LGPD — Lei nº 13.709/2018), o desenvolvedor é o <strong>Controlador</strong> dos seus dados pessoais.
+    O serviço de banco de dados <strong>Supabase Inc.</strong> atua como Operador.
+  </p>
+
+  <h2>2. Dados coletados</h2>
+  <table>
+    <thead>
+      <tr><th>Categoria</th><th>Dados específicos</th><th>Finalidade</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Autenticação</td>
+        <td>E-mail, senha (nunca armazenada em texto puro — processada pelo Supabase Auth), token JWT de sessão</td>
+        <td>Identificar e autenticar o corretor na extensão e no painel web</td>
+      </tr>
+      <tr>
+        <td>Contatos do WhatsApp</td>
+        <td>Nome do contato, número de telefone extraído da interface do WhatsApp Web</td>
+        <td>Criar e identificar leads no banco de dados do corretor</td>
+      </tr>
+      <tr>
+        <td>Qualificação de leads</td>
+        <td>Classificação (Quente/Morno/Frio), valor do imóvel (R$), localização de interesse, momento de compra, status de negociação</td>
+        <td>Organizar e qualificar leads para acompanhamento comercial</td>
+      </tr>
+      <tr>
+        <td>Dados de atividade</td>
+        <td>Data e hora do último contato com cada lead (capturado automaticamente ao enviar mensagens)</td>
+        <td>Calcular prioridade de follow-up e gerar métricas de desempenho</td>
+      </tr>
+      <tr>
+        <td>Cache local</td>
+        <td>Classificações, snooze de leads, preferências de exibição</td>
+        <td>Melhorar a experiência — armazenados apenas no dispositivo via <code>chrome.storage.local</code></td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h2>3. Como os dados são usados</h2>
+  <p>Os dados coletados são usados <strong>exclusivamente</strong> para:</p>
+  <ul>
+    <li>Autenticar o usuário e manter a sessão ativa na extensão e no painel web</li>
+    <li>Criar, exibir, atualizar e excluir leads no banco de dados do corretor</li>
+    <li>Calcular e exibir métricas de desempenho de vendas (conversão, VGV, leads por período)</li>
+    <li>Gerar alertas de follow-up para leads sem contato recente</li>
+    <li>Sincronizar dados entre dispositivos do mesmo usuário autenticado</li>
+  </ul>
+
+  <div class="highlight-box">
+    <p>
+      <strong>Declaração de Uso Limitado (Chrome Web Store — Limited Use Policy):</strong><br>
+      Os dados coletados pela Organiza <strong>nunca são usados</strong> para publicidade personalizada, retargeting ou interest-based advertising.
+      Os dados <strong>nunca são vendidos, repassados ou compartilhados</strong> com terceiros para qualquer finalidade comercial ou publicitária.
+      O uso é estritamente limitado às funcionalidades descritas nesta política.
+    </p>
+  </div>
+
+  <h2>4. Compartilhamento com terceiros</h2>
+  <table>
+    <thead>
+      <tr><th>Serviço</th><th>Empresa</th><th>País</th><th>Finalidade</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Supabase</td>
+        <td>Supabase Inc.</td>
+        <td>Estados Unidos</td>
+        <td>Banco de dados de leads, autenticação de usuários, armazenamento seguro</td>
+      </tr>
+    </tbody>
+  </table>
+  <p>
+    Os dados são transmitidos ao Supabase por conexão criptografada (HTTPS/TLS).
+    Para mais detalhes, consulte a <a href="https://supabase.com/privacy" target="_blank" rel="noopener">Política de Privacidade do Supabase</a>.
+  </p>
+  <p>
+    <strong>Transferência internacional:</strong> Ao usar a Organiza, seus dados são armazenados em servidores do Supabase Inc. nos Estados Unidos.
+    Ao aceitar esta política na tela de consentimento da extensão, você consente expressamente com essa transferência.
+  </p>
+
+  <h2>5. Base legal (LGPD)</h2>
+  <ul>
+    <li><strong>Consentimento explícito</strong> (art. 7º, I) — coletado na tela de aceite exibida na primeira utilização da extensão. Pode ser revogado a qualquer momento solicitando a exclusão da conta.</li>
+    <li><strong>Execução de contrato</strong> (art. 7º, V) — para os dados estritamente necessários para prestar o serviço contratado.</li>
+  </ul>
+
+  <h2>6. Segurança dos dados</h2>
+  <ul>
+    <li>Toda comunicação com o Supabase usa <strong>HTTPS/TLS</strong></li>
+    <li>Senhas nunca são armazenadas em texto puro — gerenciadas com hash seguro pelo Supabase Auth</li>
+    <li>O acesso ao banco é controlado por <strong>Row Level Security (RLS)</strong> — cada usuário acessa apenas seus próprios leads</li>
+    <li>Tokens JWT têm validade limitada e são renovados automaticamente</li>
+    <li>Cache local armazenado em <code>chrome.storage.local</code> — inacessível a outras páginas ou extensões</li>
+  </ul>
+
+  <h2>7. Retenção de dados</h2>
+  <p>
+    Os dados são mantidos enquanto sua conta estiver ativa. Ao solicitar a exclusão da conta, todos os dados associados (leads, qualificações, histórico) são permanentemente excluídos do banco dentro de <strong>30 dias</strong>.
+  </p>
+  <p>
+    Dados de cache no dispositivo são apagados automaticamente ao fazer logout na extensão ou ao desinstalá-la.
+  </p>
+
+  <h2>8. Seus direitos (LGPD)</h2>
+  <ul>
+    <li><strong>Acesso:</strong> solicitar cópia de todos os dados mantidos sobre você</li>
+    <li><strong>Correção:</strong> solicitar correção de dados inexatos ou desatualizados</li>
+    <li><strong>Exclusão:</strong> solicitar a remoção permanente dos seus dados</li>
+    <li><strong>Portabilidade:</strong> solicitar exportação dos dados em formato estruturado</li>
+    <li><strong>Revogação do consentimento:</strong> revogar o consentimento dado anteriormente</li>
+  </ul>
+  <p>
+    Para exercer esses direitos, envie um e-mail para
+    <a href="mailto:pedropiresdelacorte03@gmail.com">pedropiresdelacorte03@gmail.com</a>
+    com o assunto <strong>"Solicitação LGPD"</strong>. Respondemos em até 15 dias úteis.
+  </p>
+
+  <h2>9. Crianças e adolescentes</h2>
+  <p>
+    A extensão Organiza é destinada exclusivamente a profissionais adultos. Não coletamos intencionalmente dados de menores de 18 anos.
+    Caso isso ocorra, entre em contato para exclusão imediata.
+  </p>
+
+  <h2>10. Alterações nesta política</h2>
+  <p>
+    Esta política pode ser atualizada periodicamente. Alterações relevantes serão comunicadas via extensão.
+    A data da última atualização estará sempre indicada no topo desta página.
+  </p>
+
+  <h2>11. Contato</h2>
+  <ul>
+    <li><strong>Responsável:</strong> Pedro Pires de La Corte</li>
+    <li><strong>E-mail:</strong> <a href="mailto:pedropiresdelacorte03@gmail.com">pedropiresdelacorte03@gmail.com</a></li>
+    <li><strong>País:</strong> Brasil</li>
+  </ul>
+</main>
+
+<footer>
+  <p>© 2026 Organiza. Todos os direitos reservados.</p>
+  <p style="margin-top:6px;">Em conformidade com a LGPD (Lei nº 13.709/2018) e com as políticas do Chrome Web Store.</p>
+</footer>
+
+</body>
+</html>
