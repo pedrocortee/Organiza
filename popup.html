@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <style>
+    :root {
+      --bg: #111827; --surface: #1f2937; --border: #374151;
+      --text: #f9fafb; --muted: #9ca3af; --muted2: #6b7280;
+      --green: #25D366; --green-hover: #1ebe5d;
+      --red: #ef4444; --yellow: #f59e0b;
+      --btn-sec: #374151; --btn-sec-text: #d1d5db; --btn-sec-hover: #4b5563;
+    }
+    @media (prefers-color-scheme: light) {
+      :root {
+        --bg: #ffffff; --surface: #f3f4f6; --border: #e5e7eb;
+        --text: #111827; --muted: #6b7280; --muted2: #9ca3af;
+        --btn-sec: #e5e7eb; --btn-sec-text: #374151; --btn-sec-hover: #d1d5db;
+      }
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: Arial, sans-serif;
+      background: var(--bg); color: var(--text);
+      width: 280px; padding: 20px;
+    }
+
+    .logo { font-size: 18px; font-weight: 700; margin-bottom: 4px; }
+    .logo .dot { color: var(--green); }
+    .sub { font-size: 12px; color: var(--muted); margin-bottom: 16px; line-height: 1.5; }
+
+    input {
+      width: 100%; padding: 8px 10px;
+      border-radius: 7px; border: 1px solid var(--border);
+      background: var(--surface); color: var(--text);
+      font-size: 13px; margin-bottom: 8px;
+    }
+    input:focus { outline: none; border-color: var(--green); }
+
+    .btn-primary {
+      width: 100%; padding: 9px; border: none; border-radius: 7px;
+      font-size: 13px; font-weight: 700; cursor: pointer;
+      background: var(--green); color: white; margin-bottom: 6px;
+    }
+    .btn-primary:hover { background: var(--green-hover); }
+    .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    .btn-sec {
+      width: 100%; padding: 9px; border: none; border-radius: 7px;
+      font-size: 13px; font-weight: 700; cursor: pointer;
+      background: var(--btn-sec); color: var(--btn-sec-text); margin-bottom: 6px;
+    }
+    .btn-sec:hover { background: var(--btn-sec-hover); }
+
+    .btn-link {
+      width: 100%; padding: 7px; border: none; background: transparent;
+      color: var(--muted); font-size: 12px; cursor: pointer; text-decoration: underline;
+    }
+    .btn-link:hover { color: var(--text); }
+
+    .error-msg {
+      font-size: 11px; color: var(--red); margin-bottom: 8px;
+      min-height: 14px; line-height: 1.4;
+    }
+    .success-msg {
+      font-size: 11px; color: var(--green); margin-bottom: 8px;
+      min-height: 14px; line-height: 1.4;
+    }
+
+    /* Loading screen */
+    #s-loading { text-align: center; padding: 20px 0; }
+    .spinner {
+      width: 28px; height: 28px; border: 3px solid var(--border);
+      border-top-color: var(--green); border-radius: 50%;
+      animation: spin 0.7s linear infinite; margin: 0 auto 12px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* Info rows (active screen) */
+    .info-row {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 7px 10px; background: var(--surface); border-radius: 7px;
+      font-size: 12px; margin-bottom: 6px; border: 1px solid var(--border);
+    }
+    .info-label { color: var(--muted); }
+    .info-val { color: var(--text); font-weight: 600; max-width: 160px;
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+    .badge {
+      display: inline-block; padding: 3px 10px; border-radius: 20px;
+      font-size: 11px; font-weight: 700; margin-bottom: 14px;
+    }
+    .badge.ok      { background: rgba(37,211,102,0.12); color: var(--green);  border: 1px solid rgba(37,211,102,0.3); }
+    .badge.pending { background: rgba(245,158,11,0.12); color: var(--yellow); border: 1px solid rgba(245,158,11,0.3); }
+    .badge.expired { background: rgba(239,68,68,0.12);  color: var(--red);    border: 1px solid rgba(239,68,68,0.3); }
+
+    /* Blocked screen */
+    .block-icon { font-size: 32px; margin: 12px 0 8px; text-align: center; color: var(--red); }
+
+    /* Divider */
+    .divider { height: 1px; background: var(--border); margin: 12px 0; }
+
+    .screen { display: none; }
+    .screen.visible { display: block; }
+  </style>
+</head>
+<body>
+
+  <!-- Tela: Aviso de privacidade (primeiro uso) -->
+  <div id="s-disclosure" class="screen">
+    <div class="logo">Organiza<span class="dot">.</span></div>
+    <p class="sub" style="margin-top:6px;margin-bottom:10px;font-weight:600;color:var(--text)">Antes de começar</p>
+    <p class="sub" style="margin-bottom:10px">Para funcionar, o Organiza acessa os seguintes dados do WhatsApp Web:</p>
+    <ul style="font-size:12px;color:var(--muted);margin-bottom:12px;padding-left:16px;line-height:1.9;">
+      <li>Nomes e telefones de contatos</li>
+      <li>Dados de leads: ticket, localização, status</li>
+      <li>Seu email e credenciais de login</li>
+    </ul>
+    <p class="sub" style="margin-bottom:14px">Esses dados ficam armazenados no Supabase e são acessados <strong>somente por você</strong>. Ao continuar, você concorda com nossa <a href="https://pedrocortee.github.io/Organiza/privacy" id="link-privacy" target="_blank" style="color:var(--green);text-decoration:none">Política de Privacidade</a>.</p>
+    <button id="btn-accept-disclosure" class="btn-primary">Entendi e aceito</button>
+  </div>
+
+  <!-- Tela: Login -->
+  <div id="s-login" class="screen">
+    <div class="logo">Organiza<span class="dot">.</span></div>
+    <p class="sub">Entre com sua conta para acessar seus leads.</p>
+    <input type="email" id="login-email" placeholder="seu@email.com" autocomplete="email" />
+    <input type="password" id="login-pwd" placeholder="Senha" autocomplete="current-password" />
+    <div id="login-error" class="error-msg"></div>
+    <div id="login-success" class="success-msg"></div>
+    <button id="btn-login" class="btn-primary">Entrar</button>
+    <button id="btn-assinar" class="btn-sec">Assinar</button>
+    <button id="btn-goto-forgot" class="btn-link" style="font-size:11px;color:var(--muted2)">Esqueceu a senha?</button>
+  </div>
+
+  <!-- Tela: Esqueceu a senha -->
+  <div id="s-forgot" class="screen">
+    <div class="logo">Organiza<span class="dot">.</span></div>
+    <p class="sub">Informe seu email para receber o link de redefinição de senha.</p>
+    <input type="email" id="forgot-email" placeholder="seu@email.com" autocomplete="email" />
+    <div id="forgot-error" class="error-msg"></div>
+    <div id="forgot-success" class="success-msg"></div>
+    <button id="btn-forgot-send" class="btn-primary">Enviar link</button>
+    <button id="btn-goto-login-from-forgot" class="btn-link">Voltar ao login</button>
+  </div>
+
+  <!-- Tela: Carregando -->
+  <div id="s-loading" class="screen">
+    <div class="spinner"></div>
+    <p class="sub" style="text-align:center" id="loading-msg">Verificando sessão...</p>
+  </div>
+
+  <!-- Tela: Ativo -->
+  <div id="s-active" class="screen">
+    <div class="logo">Organiza<span class="dot">.</span></div>
+    <div id="plano-badge" class="badge ok" style="margin-top:8px">● Ativo</div>
+    <div class="info-row"><span class="info-label">Expira em</span><span id="active-expiry" class="info-val">—</span></div>
+    <div class="divider"></div>
+    <button id="btn-dashboard" class="btn-primary">Acessar painel →</button>
+    <button id="btn-logout" class="btn-sec">Sair da conta</button>
+  </div>
+
+  <!-- Tela: Bloqueado -->
+  <div id="s-blocked" class="screen">
+    <div class="logo">Organiza<span class="dot">.</span></div>
+    <div class="block-icon">⊘</div>
+    <div id="block-badge" class="badge expired" style="margin: 0 auto 10px; display:block; text-align:center">Assinatura inativa</div>
+    <p id="block-msg" class="sub" style="text-align:center; margin-bottom:16px"></p>
+    <button id="btn-logout-blocked" class="btn-sec">Sair da conta</button>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>

@@ -205,12 +205,24 @@
 
     /* ── Follow-up list ──────────────────────────────────────── */
     .fu-list { display: flex; flex-direction: column; gap: 6px; }
-    .fu-row { display: flex; align-items: center; justify-content: space-between; padding: 11px 14px; background: var(--surface2); border-radius: 8px; border: 1px solid transparent; transition: border-color .15s; }
+    .fu-row { display: block; padding: 11px 14px; background: var(--surface2); border-radius: 8px; border: 1px solid transparent; transition: border-color .15s; cursor: pointer; }
     .fu-row:hover { border-color: var(--border); }
+    .fu-row-header { display: flex; align-items: center; justify-content: space-between; }
     .fu-nome { font-size: 13px; font-weight: 500; display: flex; align-items: center; gap: 8px; }
     .fu-tel { font-size: 11px; color: var(--muted); margin-top: 2px; }
     .fu-right { display: flex; align-items: center; gap: 10px; }
     .fu-tempo { font-size: 12px; color: var(--muted); }
+    .fu-chevron { font-size: 10px; color: var(--muted); margin-left: 4px; transition: transform .2s; display: inline-block; }
+    .fu-row.open .fu-chevron { transform: rotate(180deg); }
+    .fu-expand { display: none; border-top: 1px solid var(--border); margin-top: 10px; padding-top: 10px; }
+    .fu-row.open .fu-expand { display: block; }
+    .fu-detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 16px; }
+    .fu-detail-item { display: flex; flex-direction: column; gap: 2px; }
+    .fu-detail-label { font-size: 10px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
+    .fu-detail-value { font-size: 12px; color: var(--text); }
+    .fu-obs-block { margin-top: 10px; }
+    .fu-obs-text { font-size: 12px; color: var(--text); line-height: 1.5; white-space: pre-wrap; background: var(--bg); border-radius: 6px; padding: 8px 10px; border: 1px solid var(--border); }
+    .fu-empty-qual { font-size: 12px; color: var(--muted); font-style: italic; }
 
     .btn-wa { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 6px; background: rgba(37,211,102,0.12); color: #25D366; border: 1px solid rgba(37,211,102,0.25); text-decoration: none; flex-shrink: 0; transition: all .15s; cursor: pointer; padding: 0; }
     .btn-wa:hover { background: rgba(37,211,102,0.25); border-color: rgba(37,211,102,0.5); }
@@ -1213,24 +1225,60 @@ function renderLeadRow(l, lista) {
   const telExib   = telRaw || 'sem telefone';
   const telWa     = telRaw.replace(/\D/g, '');
 
+  const statusLabel = { busca: 'Em busca', negociacao: 'Em negociação', vendido: 'Vendido' };
+  const momentoLabel = { pronto: 'Pronto pra morar', obra: 'Em obra / Lançamento', indefinido: 'Sem definição' };
+  const ticketFmt = l.ticket ? 'R$ ' + Number(l.ticket).toLocaleString('pt-BR') : null;
+
+  const detalhes = [
+    l.status_negociacao ? { label: 'Status', value: statusLabel[l.status_negociacao] || l.status_negociacao } : null,
+    ticketFmt           ? { label: 'Ticket', value: ticketFmt } : null,
+    l.localizacao       ? { label: 'Localização', value: l.localizacao } : null,
+    l.momento_compra    ? { label: 'Momento', value: momentoLabel[l.momento_compra] || l.momento_compra } : null,
+  ].filter(Boolean);
+
+  const temDados = detalhes.length > 0 || l.observacoes;
+
   const row = document.createElement('div');
   row.className = 'fu-row';
   row.innerHTML = `
-    <div>
-      <div class="fu-nome"><span class="dot ${dc}"></span>${l.nome}</div>
-      <div class="fu-tel">${telExib}</div>
+    <div class="fu-row-header">
+      <div>
+        <div class="fu-nome"><span class="dot ${dc}"></span>${l.nome}<span class="fu-chevron">▼</span></div>
+        <div class="fu-tel">${telExib}</div>
+      </div>
+      <div class="fu-right">
+        <span class="fu-tempo">${tempo(l.criado_em)}</span>
+        <span class="badge ${bc}">${bt}</span>
+      </div>
     </div>
-    <div class="fu-right">
-      <span class="fu-tempo">${tempo(l.criado_em)}</span>
-      <span class="badge ${bc}">${bt}</span>
+    <div class="fu-expand">
+      ${temDados ? `
+        ${detalhes.length > 0 ? `<div class="fu-detail-grid">${detalhes.map(d => `
+          <div class="fu-detail-item">
+            <span class="fu-detail-label">${d.label}</span>
+            <span class="fu-detail-value">${d.value}</span>
+          </div>`).join('')}
+        </div>` : ''}
+        ${l.observacoes ? `
+          <div class="fu-obs-block">
+            <span class="fu-detail-label">Observações</span>
+            <div class="fu-obs-text">${l.observacoes.replace(/</g, '&lt;')}</div>
+          </div>` : ''}
+      ` : '<span class="fu-empty-qual">Nenhuma qualificação registrada ainda.</span>'}
     </div>`;
 
   const btn = document.createElement(telWa.length >= 8 ? 'button' : 'span');
   btn.className = 'btn-wa' + (telWa.length >= 8 ? '' : ' btn-wa-disabled');
   btn.title = telWa.length >= 8 ? 'Abrir no WhatsApp Web' : 'Sem telefone cadastrado';
   btn.innerHTML = WA_SVG;
-  if (telWa.length >= 8) btn.addEventListener('click', () => abrirWhatsApp(telWa));
+  if (telWa.length >= 8) btn.addEventListener('click', (e) => { e.stopPropagation(); abrirWhatsApp(telWa); });
   row.querySelector('.fu-right').appendChild(btn);
+
+  row.addEventListener('click', (e) => {
+    if (e.target.closest('.btn-wa')) return;
+    row.classList.toggle('open');
+  });
+
   lista.appendChild(row);
 }
 

@@ -1,0 +1,13 @@
+{
+  "name": "organiza-extension",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "test": "npx playwright test",
+    "test:e2e": "npx playwright test tests/e2e/",
+    "test:unit": "node --test tests/unit/logic.test.js"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.44.0"
+  }
+}

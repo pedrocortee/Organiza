@@ -1,0 +1,49 @@
+{
+  "manifest_version": 3,
+  "name": "Organiza",
+  "version": "1.0",
+  "description": "Gerencie seus leads do WhatsApp Web com o Organiza",
+  "permissions": [
+    "storage",
+    "tabs",
+    "windows"
+  ],
+  "host_permissions": [
+    "https://tkxvbuzykfnoxiyeoams.supabase.co/*",
+    "https://web.whatsapp.com/*"
+  ],
+  "externally_connectable": {
+    "matches": [
+      "https://pedrocortee.github.io/*"
+    ]
+  },
+  "background": {
+    "service_worker": "background.js"
+  },
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "Organiza",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    }
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://web.whatsapp.com/*"
+      ],
+      "js": [
+        "content.js"
+      ],
+      "run_at": "document_idle"
+    }
+  ],
+  "web_accessible_resources": []
+}
