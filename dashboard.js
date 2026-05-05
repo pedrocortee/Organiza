@@ -56,6 +56,76 @@ function tempo(dataStr) {
 }
 
 // ── Renderização ───────────────────────────────────────────────
+const WA_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.123.554 4.117 1.528 5.845L.057 23.882a.5.5 0 0 0 .61.61l6.037-1.471A11.945 11.945 0 0 0 12 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.818a9.808 9.808 0 0 1-5.006-1.37l-.358-.214-3.724.907.923-3.612-.234-.373A9.818 9.818 0 0 1 2.182 12C2.182 6.57 6.57 2.182 12 2.182c5.43 0 9.818 4.388 9.818 9.818 0 5.43-4.388 9.818-9.818 9.818z"/></svg>`;
+
+function renderLeadRow(l, lista) {
+  const diff = Date.now() - new Date(l.criado_em).getTime();
+  const dias = Math.floor(diff / 86400000);
+  const bc = dias > 7 ? 'urgente' : dias > 2 ? 'atencao' : 'ok';
+  const bt = dias > 7 ? 'urgente' : dias > 2 ? 'atenção' : 'ok';
+  const dc = l.classificacao === 'quente' ? 'q' : l.classificacao === 'morno' ? 'm' : l.classificacao === 'frio' ? 'f' : 'nc';
+
+  const telWa = (l.telefone || '').replace(/\D/g, '');
+
+  const statusLabel  = { busca: 'Em busca', negociacao: 'Em negociação', vendido: 'Vendido' };
+  const momentoLabel = { pronto: 'Pronto pra morar', obra: 'Em obra / Lançamento', indefinido: 'Sem definição' };
+  const ticketFmt = l.ticket ? 'R$ ' + Number(l.ticket).toLocaleString('pt-BR') : null;
+
+  const detalhes = [
+    l.status_negociacao ? { label: 'Status',      value: statusLabel[l.status_negociacao]  || l.status_negociacao } : null,
+    ticketFmt           ? { label: 'Ticket',      value: ticketFmt } : null,
+    l.localizacao       ? { label: 'Localização', value: l.localizacao } : null,
+    l.momento_compra    ? { label: 'Momento',     value: momentoLabel[l.momento_compra]    || l.momento_compra } : null,
+  ].filter(Boolean);
+
+  const temDados = detalhes.length > 0 || l.observacoes;
+
+  const row = document.createElement('div');
+  row.className = 'fu-row';
+  row.innerHTML = `
+    <div class="fu-row-header">
+      <div>
+        <div class="fu-nome"><span class="dot ${dc}"></span>${l.nome}<span class="fu-chevron">▼</span></div>
+        <div class="fu-tel">${l.telefone || 'sem telefone'}</div>
+      </div>
+      <div class="fu-right">
+        <span class="fu-tempo">${tempo(l.criado_em)}</span>
+        <span class="badge ${bc}">${bt}</span>
+      </div>
+    </div>
+    <div class="fu-expand">
+      ${temDados ? `
+        ${detalhes.length > 0 ? `<div class="fu-detail-grid">${detalhes.map(d => `
+          <div class="fu-detail-item">
+            <span class="fu-detail-label">${d.label}</span>
+            <span class="fu-detail-value">${d.value}</span>
+          </div>`).join('')}
+        </div>` : ''}
+        ${l.observacoes ? `
+          <div class="fu-obs-block">
+            <span class="fu-detail-label">Observações</span>
+            <div class="fu-obs-text">${l.observacoes.replace(/</g, '&lt;')}</div>
+          </div>` : ''}
+      ` : '<span class="fu-empty-qual">Nenhuma qualificação registrada ainda.</span>'}
+    </div>`;
+
+  if (telWa.length >= 8) {
+    const btn = document.createElement('button');
+    btn.className = 'btn-wa';
+    btn.title = 'Abrir no WhatsApp Web';
+    btn.innerHTML = WA_SVG;
+    btn.addEventListener('click', (e) => { e.stopPropagation(); window.open(`https://web.whatsapp.com/send?phone=${telWa}`, '_blank'); });
+    row.querySelector('.fu-right').appendChild(btn);
+  }
+
+  row.addEventListener('click', (e) => {
+    if (e.target.closest('.btn-wa')) return;
+    row.classList.toggle('open');
+  });
+
+  lista.appendChild(row);
+}
+
 function renderDados(leads) {
   const agora = new Date();
   const hoje  = new Date(agora); hoje.setHours(0,0,0,0);
@@ -107,27 +177,15 @@ function renderDados(leads) {
 
   // Lista follow-up
   const lista = document.getElementById('fu-lista');
-  const sorted = [...leads].sort((a,b) => new Date(a.criado_em)-new Date(b.criado_em)).slice(0,7);
+  const sorted = [...leads]
+    .filter(l => l.status_negociacao !== 'vendido')
+    .sort((a,b) => new Date(a.criado_em)-new Date(b.criado_em))
+    .slice(0, 10);
+  lista.innerHTML = '';
   if (!sorted.length) {
     lista.innerHTML = '<div class="empty">Nenhum lead cadastrado ainda</div>';
   } else {
-    lista.innerHTML = sorted.map(l => {
-      const diff = Date.now()-new Date(l.criado_em).getTime();
-      const dias = Math.floor(diff/86400000);
-      const bc = dias > 7 ? 'urgente' : dias > 2 ? 'atencao' : 'ok';
-      const bt = dias > 7 ? 'urgente' : dias > 2 ? 'atenção' : 'ok';
-      const dc = l.classificacao === 'quente' ? 'q' : l.classificacao === 'morno' ? 'm' : l.classificacao === 'frio' ? 'f' : 'g';
-      return `<div class="fu-row">
-        <div>
-          <div class="fu-nome"><span class="dot ${dc}"></span>${l.nome}</div>
-          <div class="fu-tel">${l.telefone || 'sem telefone'}</div>
-        </div>
-        <div class="fu-right">
-          <span class="fu-tempo">${tempo(l.criado_em)}</span>
-          <span class="badge ${bc}">${bt}</span>
-        </div>
-      </div>`;
-    }).join('');
+    sorted.forEach(l => renderLeadRow(l, lista));
   }
 
   // Gráficos
