@@ -1172,7 +1172,7 @@ function tempo(dataStr) {
 
 async function fetchLeads(profileId, jwt) {
   const res = await fetch(
-    `${SUPABASE_URL}/rest/v1/leads?select=id,nome,telefone,classificacao,criado_em,profile_id,ticket,localizacao,momento_compra,status_negociacao&profile_id=eq.${encodeURIComponent(profileId)}&order=criado_em.desc`,
+    `${SUPABASE_URL}/rest/v1/leads?select=id,nome,telefone,classificacao,criado_em,ultimo_contato,profile_id,ticket,localizacao,momento_compra,status_negociacao,observacoes&profile_id=eq.${encodeURIComponent(profileId)}&order=criado_em.desc`,
     { headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${jwt}` } }
   );
   if (!res.ok) throw new Error('Erro ' + res.status);
@@ -1211,7 +1211,8 @@ function abrirWhatsApp(tel) {
 
 // ── Renderização de linha de lead ────────────────────────────
 function renderLeadRow(l, lista) {
-  const diff = Date.now() - new Date(l.criado_em).getTime();
+  const refContato = l.ultimo_contato || l.criado_em;
+  const diff = Date.now() - new Date(refContato).getTime();
   const dias = Math.floor(diff / 86400000);
   const bc = dias > 7 ? 'urgente' : dias > 2 ? 'atencao' : 'ok';
   const bt = dias > 7 ? 'urgente' : dias > 2 ? 'atenção' : 'ok';
@@ -1247,7 +1248,7 @@ function renderLeadRow(l, lista) {
         <div class="fu-tel">${telExib}</div>
       </div>
       <div class="fu-right">
-        <span class="fu-tempo">${tempo(l.criado_em)}</span>
+        <span class="fu-tempo">${tempo(l.ultimo_contato || l.criado_em)}</span>
         <span class="badge ${bc}">${bt}</span>
       </div>
     </div>
@@ -1358,10 +1359,10 @@ function renderDados(leads) {
   if (pp) pp.textContent = periodoDias ? `· últimos ${periodoDias}d` : '· todos';
 
   // ── Lembretes — apenas leads ativos (não vendidos) ────────
-  // Nota: usa criado_em como proxy de último contato (campo não existe ainda no schema)
   const ativos = leads.filter(l => l.status_negociacao !== 'vendido');
-  const f24 = ativos.filter(l => Date.now()-new Date(l.criado_em).getTime() > 86400000).length;
-  const f7d = ativos.filter(l => Date.now()-new Date(l.criado_em).getTime() > 7*86400000).length;
+  const refTs = l => new Date(l.ultimo_contato || l.criado_em).getTime();
+  const f24 = ativos.filter(l => Date.now()-refTs(l) > 86400000).length;
+  const f7d = ativos.filter(l => Date.now()-refTs(l) > 7*86400000).length;
   const fsc = leads.filter(l => !l.classificacao).length;
 
   document.getElementById('f-24h').textContent     = f24;
@@ -1388,7 +1389,7 @@ function renderDados(leads) {
 
   // Lista leads prioritários: ativos, ordenados pelos mais antigos, top 10
   const lista  = document.getElementById('fu-lista');
-  const sorted = [...ativos].sort((a,b) => new Date(a.criado_em)-new Date(b.criado_em)).slice(0, 10);
+  const sorted = [...ativos].sort((a,b) => refTs(a)-refTs(b)).slice(0, 10);
   lista.innerHTML = '';
 
   const fuSub = document.getElementById('fu-sub');
