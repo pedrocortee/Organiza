@@ -1259,11 +1259,12 @@ function renderLeadRow(l, lista) {
             <span class="fu-detail-value">${d.value}</span>
           </div>`).join('')}
         </div>` : ''}
-        ${l.observacoes ? `
-          <div class="fu-obs-block">
-            <span class="fu-detail-label">Observações</span>
-            <div class="fu-obs-text">${l.observacoes.replace(/</g, '&lt;')}</div>
-          </div>` : ''}
+        <div class="fu-obs-block">
+          <span class="fu-detail-label">Observações</span>
+          ${l.observacoes
+            ? `<div class="fu-obs-text">${l.observacoes.replace(/</g, '&lt;')}</div>`
+            : `<span class="fu-empty-qual">Nenhuma observação registrada.</span>`}
+        </div>
       ` : '<span class="fu-empty-qual">Nenhuma qualificação registrada ainda.</span>'}
     </div>`;
 
