@@ -59,7 +59,8 @@ function tempo(dataStr) {
 const WA_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.123.554 4.117 1.528 5.845L.057 23.882a.5.5 0 0 0 .61.61l6.037-1.471A11.945 11.945 0 0 0 12 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.818a9.808 9.808 0 0 1-5.006-1.37l-.358-.214-3.724.907.923-3.612-.234-.373A9.818 9.818 0 0 1 2.182 12C2.182 6.57 6.57 2.182 12 2.182c5.43 0 9.818 4.388 9.818 9.818 0 5.43-4.388 9.818-9.818 9.818z"/></svg>`;
 
 function renderLeadRow(l, lista) {
-  const diff = Date.now() - new Date(l.criado_em).getTime();
+  const refContato = l.ultimo_contato || l.criado_em;
+  const diff = Date.now() - new Date(refContato).getTime();
   const dias = Math.floor(diff / 86400000);
   const bc = dias > 7 ? 'urgente' : dias > 2 ? 'atencao' : 'ok';
   const bt = dias > 7 ? 'urgente' : dias > 2 ? 'atenção' : 'ok';
@@ -89,7 +90,7 @@ function renderLeadRow(l, lista) {
         <div class="fu-tel">${l.telefone || 'sem telefone'}</div>
       </div>
       <div class="fu-right">
-        <span class="fu-tempo">${tempo(l.criado_em)}</span>
+        <span class="fu-tempo">${tempo(refContato)}</span>
         <span class="badge ${bc}">${bt}</span>
       </div>
     </div>
@@ -169,8 +170,9 @@ function renderDados(leads) {
   if (pl) pl.textContent = periodoDias ? `(últimos ${periodoDias} dias)` : '(todos os períodos)';
 
   // Follow-up
-  const f24 = leads.filter(l => Date.now()-new Date(l.criado_em).getTime() > 86400000).length;
-  const f7d = leads.filter(l => Date.now()-new Date(l.criado_em).getTime() > 7*86400000).length;
+  const refTs = l => new Date(l.ultimo_contato || l.criado_em).getTime();
+  const f24 = leads.filter(l => l.status_negociacao !== 'vendido' && Date.now()-refTs(l) > 86400000).length;
+  const f7d = leads.filter(l => l.status_negociacao !== 'vendido' && Date.now()-refTs(l) > 7*86400000).length;
   const fsc = leads.filter(l => !l.classificacao).length;
   document.getElementById('f-24h').textContent    = f24;
   document.getElementById('f-7d').textContent     = f7d;
@@ -180,7 +182,7 @@ function renderDados(leads) {
   const lista = document.getElementById('fu-lista');
   const sorted = [...leads]
     .filter(l => l.status_negociacao !== 'vendido')
-    .sort((a,b) => new Date(a.criado_em)-new Date(b.criado_em))
+    .sort((a,b) => new Date(a.ultimo_contato || a.criado_em) - new Date(b.ultimo_contato || b.criado_em))
     .slice(0, 10);
   lista.innerHTML = '';
   if (!sorted.length) {
