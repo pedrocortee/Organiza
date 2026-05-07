@@ -291,14 +291,14 @@
     .map-pin { width: 14px; height: 14px; border-radius: 50%; display: flex; align-items: center; justify-content: center; position: relative; }
     .map-pin::after { content: ''; position: absolute; inset: -4px; border-radius: 50%; opacity: 0.25; }
     .map-pin-dot { width: 5px; height: 5px; border-radius: 50%; background: rgba(255,255,255,0.9); position: relative; z-index: 1; }
-    .map-pin.q  { background: #FF4D4D; box-shadow: 0 0 10px 2px rgba(255,77,77,0.6); }
-    .map-pin.q::after  { background: #FF4D4D; }
-    .map-pin.m  { background: #FF9500; box-shadow: 0 0 10px 2px rgba(255,149,0,0.6); }
-    .map-pin.m::after  { background: #FF9500; }
-    .map-pin.f  { background: #4D9EFF; box-shadow: 0 0 10px 2px rgba(77,158,255,0.6); }
-    .map-pin.f::after  { background: #4D9EFF; }
-    .map-pin.nc { background: rgba(180,180,180,0.6); box-shadow: 0 0 6px 1px rgba(180,180,180,0.3); }
-    .map-pin.nc::after { background: rgba(180,180,180,0.4); }
+    .map-pin.busca { background: #4D9EFF; box-shadow: 0 0 10px 2px rgba(77,158,255,0.6); }
+    .map-pin.busca::after  { background: #4D9EFF; }
+    .map-pin.neg  { background: #FF9500; box-shadow: 0 0 10px 2px rgba(255,149,0,0.6); }
+    .map-pin.neg::after  { background: #FF9500; }
+    .map-pin.vend { background: #69CD5A; box-shadow: 0 0 10px 2px rgba(105,205,90,0.6); }
+    .map-pin.vend::after { background: #69CD5A; }
+    .map-pin.nc   { background: rgba(180,180,180,0.6); box-shadow: 0 0 6px 1px rgba(180,180,180,0.3); }
+    .map-pin.nc::after   { background: rgba(180,180,180,0.4); }
     .leaflet-container { background: #0d1117 !important; font-family: 'Inter', sans-serif !important; }
     .leaflet-control-zoom { border: 1px solid rgba(255,255,255,0.1) !important; border-radius: 8px !important; overflow: hidden; box-shadow: 0 4px 16px rgba(0,0,0,0.5) !important; }
     .leaflet-control-zoom a { background: #1a2332 !important; color: rgba(255,255,255,0.8) !important; border-bottom: 1px solid rgba(255,255,255,0.08) !important; width: 32px !important; height: 32px !important; line-height: 32px !important; font-size: 18px !important; font-weight: 300 !important; }
@@ -308,10 +308,10 @@
     .mapa-legenda { background: rgba(17,24,32,0.88); border: 1px solid rgba(255,255,255,0.1); border-radius: 10px; padding: 10px 14px; backdrop-filter: blur(10px); box-shadow: 0 4px 20px rgba(0,0,0,0.4); }
     .leg-item { display: flex; align-items: center; gap: 8px; padding: 4px 0; font-size: 12px; color: rgba(255,255,255,0.75); }
     .leg-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
-    .leg-dot.q  { background: #FF4D4D; box-shadow: 0 0 6px rgba(255,77,77,0.7); }
-    .leg-dot.m  { background: #FF9500; box-shadow: 0 0 6px rgba(255,149,0,0.7); }
-    .leg-dot.f  { background: #4D9EFF; box-shadow: 0 0 6px rgba(77,158,255,0.7); }
-    .leg-dot.nc { background: rgba(180,180,180,0.5); }
+    .leg-dot.busca { background: #4D9EFF; box-shadow: 0 0 6px rgba(77,158,255,0.7); }
+    .leg-dot.neg   { background: #FF9500; box-shadow: 0 0 6px rgba(255,149,0,0.7); }
+    .leg-dot.vend  { background: #69CD5A; box-shadow: 0 0 6px rgba(105,205,90,0.7); }
+    .leg-dot.nc    { background: rgba(180,180,180,0.5); }
     .mapa-sidebar { display: flex; flex-direction: column; gap: 14px; overflow-y: auto; }
     .ranking-card { background: var(--surface); border-radius: 12px; border: 1px solid var(--border); padding: 14px 16px; }
     .ranking-title { font-size: 10px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 10px; }
@@ -1973,10 +1973,10 @@ function inicializarMapa() {
   legenda.onAdd = () => {
     const div = L.DomUtil.create('div', 'mapa-legenda');
     div.innerHTML = `
-      <div class="leg-item"><span class="leg-dot q"></span>Quente</div>
-      <div class="leg-item"><span class="leg-dot m"></span>Morno</div>
-      <div class="leg-item"><span class="leg-dot f"></span>Frio</div>
-      <div class="leg-item"><span class="leg-dot nc"></span>Sem classificação</div>
+      <div class="leg-item"><span class="leg-dot busca"></span>Em busca</div>
+      <div class="leg-item"><span class="leg-dot neg"></span>Em negociação</div>
+      <div class="leg-item"><span class="leg-dot vend"></span>Vendido</div>
+      <div class="leg-item"><span class="leg-dot nc"></span>Sem status</div>
     `;
     return div;
   };
@@ -1991,9 +1991,9 @@ function renderMapa(leads) {
   mapaMarkers.forEach(m => m.remove());
   mapaMarkers = [];
 
-  const COR   = { quente: '#FF4D4D', morno: '#FF9500', frio: '#4D9EFF' };
-  const LABEL = { quente: 'Quente', morno: 'Morno', frio: 'Frio' };
-  const CLS   = { quente: 'q', morno: 'm', frio: 'f' };
+  const COR   = { busca: '#4D9EFF', negociacao: '#FF9500', vendido: '#69CD5A' };
+  const LABEL = { busca: 'Em busca', negociacao: 'Em negociação', vendido: 'Vendido' };
+  const CLS   = { busca: 'busca', negociacao: 'neg', vendido: 'vend' };
   const bounds = [];
 
   leads.forEach(lead => {
@@ -2006,9 +2006,9 @@ function renderMapa(leads) {
 
     chips.forEach(chip => {
       if (!chip.lat || !chip.lng) return;
-      const cls       = CLS[lead.classificacao] || 'nc';
-      const cor       = COR[lead.classificacao] || '#aaa';
-      const tempLabel = LABEL[lead.classificacao] || 'Sem class.';
+      const cls       = CLS[lead.status_negociacao] || 'nc';
+      const cor       = COR[lead.status_negociacao] || '#aaa';
+      const tempLabel = LABEL[lead.status_negociacao] || 'Sem status';
       const ticketStr = lead.ticket ? 'R$ ' + Number(lead.ticket).toLocaleString('pt-BR') : null;
 
       const icon = L.divIcon({
@@ -2051,12 +2051,12 @@ function renderRankingMapa(leads) {
 
     chips.forEach(chip => {
       if (!chip.label) return;
-      if (!regioes[chip.label]) regioes[chip.label] = { q: 0, m: 0, f: 0, s: 0, total: 0 };
+      if (!regioes[chip.label]) regioes[chip.label] = { b: 0, n: 0, v: 0, s: 0, total: 0 };
       regioes[chip.label].total++;
-      if      (lead.classificacao === 'quente') regioes[chip.label].q++;
-      else if (lead.classificacao === 'morno')  regioes[chip.label].m++;
-      else if (lead.classificacao === 'frio')   regioes[chip.label].f++;
-      else                                       regioes[chip.label].s++;
+      if      (lead.status_negociacao === 'busca')      regioes[chip.label].b++;
+      else if (lead.status_negociacao === 'negociacao') regioes[chip.label].n++;
+      else if (lead.status_negociacao === 'vendido')    regioes[chip.label].v++;
+      else                                               regioes[chip.label].s++;
     });
   });
 
@@ -2068,9 +2068,9 @@ function renderRankingMapa(leads) {
   } else {
     listEl.innerHTML = sorted.map(([label, d], i) => {
       const dots = [
-        ...Array(Math.min(d.q, 3)).fill('<span class="dot q"></span>'),
-        ...Array(Math.min(d.m, 3)).fill('<span class="dot m"></span>'),
-        ...Array(Math.min(d.f, 3)).fill('<span class="dot f"></span>')
+        ...Array(Math.min(d.b, 3)).fill('<span class="leg-dot busca" style="width:7px;height:7px"></span>'),
+        ...Array(Math.min(d.n, 3)).fill('<span class="leg-dot neg"  style="width:7px;height:7px"></span>'),
+        ...Array(Math.min(d.v, 3)).fill('<span class="leg-dot vend" style="width:7px;height:7px"></span>')
       ].join('');
       return `<div class="ranking-row">
         <span class="ranking-pos">${i + 1}</span>
