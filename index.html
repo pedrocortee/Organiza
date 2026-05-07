@@ -228,6 +228,20 @@
     .btn-wa:hover { background: rgba(37,211,102,0.25); border-color: rgba(37,211,102,0.5); }
     .btn-wa-disabled { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 6px; background: var(--disabled-bg); color: var(--disabled-color); border: 1px solid var(--disabled-bdr); flex-shrink: 0; cursor: not-allowed; }
 
+    /* ── Lista toolbar (busca + filtros) ─────────────────────── */
+    .fu-toolbar { display: flex; gap: 8px; margin-bottom: 10px; align-items: center; flex-wrap: wrap; }
+    .fu-search { flex: 1; min-width: 140px; background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 7px 12px; color: var(--text); font-size: 12px; font-family: 'Inter', sans-serif; outline: none; }
+    .fu-search:focus { border-color: var(--green); }
+    .fu-search::placeholder { color: var(--muted); }
+    .fu-chip { padding: 4px 11px; border-radius: 20px; border: 1px solid var(--border); background: transparent; color: var(--muted); font-size: 11px; font-weight: 600; cursor: pointer; font-family: 'Inter', sans-serif; white-space: nowrap; transition: all .15s; }
+    .fu-chip:hover { color: var(--text); border-color: rgba(255,255,255,0.2); }
+    .fu-chip.active { background: rgba(255,255,255,0.07); color: var(--text); border-color: rgba(255,255,255,0.22); }
+    .fu-chip.q.active { background: rgba(255,77,77,0.12);  color: var(--quente); border-color: rgba(255,77,77,0.3); }
+    .fu-chip.m.active { background: rgba(255,149,0,0.12);  color: var(--morno);  border-color: rgba(255,149,0,0.3); }
+    .fu-chip.f.active { background: rgba(77,158,255,0.12); color: var(--frio);   border-color: rgba(77,158,255,0.3); }
+    .fu-chip.nc.active{ background: rgba(255,255,255,0.05);color: var(--muted);  border-color: rgba(255,255,255,0.18); }
+    .fu-count { font-size: 11px; color: var(--muted); margin-bottom: 8px; }
+
     .badge { font-size: 10px; font-weight: 700; padding: 2px 9px; border-radius: 20px; text-transform: uppercase; letter-spacing: .3px; }
     .badge.urgente { background: rgba(255,77,77,.15);  color: var(--quente); border: 1px solid rgba(255,77,77,.3); }
     .badge.atencao { background: rgba(255,149,0,.15);  color: var(--morno);  border: 1px solid rgba(255,149,0,.3); }
@@ -429,6 +443,15 @@
 
       <p class="section-label">Leads Prioritários</p>
       <div class="section-sub" id="fu-sub"></div>
+      <div class="fu-toolbar">
+        <input class="fu-search" id="fu-search" type="text" placeholder="Buscar por nome ou telefone…" oninput="renderLista()">
+        <button class="fu-chip active" id="chip-todos"    onclick="setFiltroClass('')">Todos</button>
+        <button class="fu-chip q"      id="chip-quente"   onclick="setFiltroClass('quente')">Quente</button>
+        <button class="fu-chip m"      id="chip-morno"    onclick="setFiltroClass('morno')">Morno</button>
+        <button class="fu-chip f"      id="chip-frio"     onclick="setFiltroClass('frio')">Frio</button>
+        <button class="fu-chip nc"     id="chip-semclass" onclick="setFiltroClass('semclass')">Sem class.</button>
+      </div>
+      <div class="fu-count" id="fu-count"></div>
       <div class="chart-card">
         <div class="fu-list" id="fu-lista">
           <div class="empty">Carregando...</div>
@@ -720,6 +743,8 @@ let chartTicket       = null;
 let chartHistContato  = null;
 let todosLeads        = [];
 let currentUid        = null;
+let listaAtivos       = [];
+let listaFiltroClass  = '';
 
 const WA_SVG = `<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>`;
 
@@ -1170,6 +1195,46 @@ function tempo(dataStr) {
   return d < 30 ? d + 'd' : Math.floor(d / 30) + ' meses';
 }
 
+function renderLista() {
+  const busca = (document.getElementById('fu-search')?.value || '').toLowerCase().trim();
+  let visible = listaAtivos;
+
+  if (listaFiltroClass === 'semclass') {
+    visible = visible.filter(l => !l.classificacao);
+  } else if (listaFiltroClass) {
+    visible = visible.filter(l => l.classificacao === listaFiltroClass);
+  }
+
+  if (busca) {
+    visible = visible.filter(l =>
+      (l.nome || '').toLowerCase().includes(busca) ||
+      (l.telefone || '').includes(busca)
+    );
+  }
+
+  const lista   = document.getElementById('fu-lista');
+  const countEl = document.getElementById('fu-count');
+  lista.innerHTML = '';
+  if (countEl) countEl.textContent = visible.length + ' lead' + (visible.length !== 1 ? 's' : '');
+
+  if (!visible.length) {
+    lista.innerHTML = '<div class="empty">Nenhum lead encontrado</div>';
+    return;
+  }
+  visible.forEach(l => renderLeadRow(l, lista));
+}
+window.renderLista = renderLista;
+
+function setFiltroClass(cls) {
+  listaFiltroClass = cls;
+  ['todos', 'quente', 'morno', 'frio', 'semclass'].forEach(id => {
+    const el = document.getElementById('chip-' + id);
+    if (el) el.classList.toggle('active', cls === '' ? id === 'todos' : id === cls);
+  });
+  renderLista();
+}
+window.setFiltroClass = setFiltroClass;
+
 async function fetchLeads(profileId, jwt) {
   const res = await fetch(
     `${SUPABASE_URL}/rest/v1/leads?select=id,nome,telefone,classificacao,criado_em,ultimo_contato,profile_id,ticket,localizacao,momento_compra,status_negociacao,observacoes&profile_id=eq.${encodeURIComponent(profileId)}&order=criado_em.desc`,
@@ -1387,19 +1452,21 @@ function renderDados(leads) {
     stripWrap.innerHTML = `<div class="alert-strip ok">✓ Nenhum lead urgente no momento. Continue assim!</div>`;
   }
 
-  // Lista leads prioritários: ativos, ordenados pelos mais antigos, top 10
-  const lista  = document.getElementById('fu-lista');
-  const sorted = [...ativos].sort((a,b) => refTs(a)-refTs(b)).slice(0, 10);
-  lista.innerHTML = '';
+  // Lista leads prioritários: todos os ativos, ordenados pelos mais antigos
+  listaAtivos = [...ativos].sort((a, b) => refTs(a) - refTs(b));
 
   const fuSub = document.getElementById('fu-sub');
-  fuSub.innerHTML = `${sorted.length} lead${sorted.length!==1?'s':''} ativo${sorted.length!==1?'s':''} com mais tempo sem contato · leads vendidos excluídos automaticamente`;
+  fuSub.innerHTML = `${listaAtivos.length} lead${listaAtivos.length!==1?'s':''} ativo${listaAtivos.length!==1?'s':''} · leads vendidos excluídos automaticamente`;
 
-  if (!sorted.length) {
-    lista.innerHTML = '<div class="empty">Nenhum lead ativo cadastrado ainda</div>';
-  } else {
-    sorted.forEach(l => renderLeadRow(l, lista));
-  }
+  // Reseta busca e filtro ao recarregar
+  const searchEl = document.getElementById('fu-search');
+  if (searchEl) searchEl.value = '';
+  listaFiltroClass = '';
+  ['todos', 'quente', 'morno', 'frio', 'semclass'].forEach(id => {
+    const el = document.getElementById('chip-' + id);
+    if (el) el.classList.toggle('active', id === 'todos');
+  });
+  renderLista();
 
   // ── Progressão no funil (mês atual vs anterior) ─────────────
   const negMesAtual  = leads.filter(l => new Date(l.criado_em) >= mes1 && l.status_negociacao === 'negociacao').length;
