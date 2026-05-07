@@ -1964,9 +1964,8 @@ function inicializarMapa() {
   mapaIniciado = true;
   mapaInstance = L.map('leaflet-map', { center: [-23.55, -46.63], zoom: 11, zoomControl: false });
   L.control.zoom({ position: 'bottomright' }).addTo(mapaInstance);
-  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-    attribution: '© <a href="https://carto.com">CARTO</a>',
-    subdomains: 'abcd',
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '© <a href="https://openstreetmap.org">OpenStreetMap</a>',
     maxZoom: 19
   }).addTo(mapaInstance);
 
