@@ -6,6 +6,8 @@
   <title>Organiza — Dashboard</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <style>
     :root {
       --bg:             #151C24;
@@ -283,6 +285,32 @@
       .main { margin-left: 0; padding: 20px; }
       .grid-4, .grid-3, .grid-2 { grid-template-columns: 1fr; }
     }
+    /* ── Mapa ─────────────────────────────────────────────────── */
+    .mapa-layout { display: grid; grid-template-columns: 1fr 272px; gap: 20px; height: calc(100vh - 132px); min-height: 400px; }
+    #leaflet-map { border-radius: 12px; overflow: hidden; border: 1px solid var(--border); }
+    .mapa-sidebar { display: flex; flex-direction: column; gap: 14px; overflow-y: auto; }
+    .ranking-card { background: var(--surface); border-radius: 12px; border: 1px solid var(--border); padding: 14px 16px; }
+    .ranking-title { font-size: 10px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 10px; }
+    .ranking-row { display: flex; align-items: center; gap: 7px; padding: 7px 0; border-bottom: 1px solid var(--border); }
+    .ranking-row:last-child { border-bottom: none; }
+    .ranking-pos { font-size: 10px; color: var(--muted); width: 14px; text-align: center; flex-shrink: 0; }
+    .ranking-name { flex: 1; font-size: 12px; color: var(--white); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .ranking-temps { display: flex; gap: 2px; align-items: center; flex-shrink: 0; }
+    .ranking-count { font-size: 13px; font-weight: 700; color: var(--green); width: 22px; text-align: right; flex-shrink: 0; }
+    .mapa-empty { text-align: center; padding: 20px 8px; color: var(--muted); font-size: 12px; line-height: 1.5; }
+    .cobertura-row { display: flex; justify-content: space-between; align-items: center; padding: 6px 0; border-bottom: 1px solid var(--border); font-size: 12px; color: var(--muted); }
+    .cobertura-row:last-child { border-bottom: none; }
+    .cobertura-val { font-weight: 700; color: var(--white); }
+    .cobertura-track { height: 4px; background: var(--surface2); border-radius: 4px; margin-top: 10px; overflow: hidden; }
+    .cobertura-fill { height: 100%; border-radius: 4px; background: var(--green); transition: width 0.5s; }
+    .leaflet-popup-content-wrapper { background: var(--surface) !important; color: var(--white) !important; border: 1px solid var(--border) !important; box-shadow: 0 4px 24px rgba(0,0,0,0.5) !important; border-radius: 10px !important; font-family: 'Inter', sans-serif !important; }
+    .leaflet-popup-tip { background: var(--surface) !important; }
+    .leaflet-popup-close-button { color: var(--muted) !important; }
+    .popup-nome { font-size: 13px; font-weight: 700; margin-bottom: 3px; color: var(--white); }
+    .popup-loc { font-size: 11px; color: var(--muted); margin-bottom: 7px; }
+    .popup-tag { display: inline-block; font-size: 10px; padding: 2px 7px; border-radius: 10px; font-weight: 600; }
+    .popup-ticket { font-size: 11px; color: var(--green); margin-top: 5px; font-weight: 600; }
+    @media (max-width: 900px) { .mapa-layout { grid-template-columns: 1fr; height: auto; } #leaflet-map { height: 380px; } }
   </style>
 </head>
 <body>
@@ -302,6 +330,9 @@
     </div>
     <div class="nav-item" id="nav-vgv" onclick="showPage('vgv')">
       <span class="nav-icon">◈</span> VGV
+    </div>
+    <div class="nav-item" id="nav-mapa" onclick="showPage('mapa')">
+      <span class="nav-icon">⊙</span> Mapa
     </div>
   </nav>
   <div class="sidebar-footer">
@@ -727,6 +758,27 @@
 
     </div>
 
+    <!-- ══════════════════════════════════════════════════════════
+         PAGE: MAPA
+         Propósito: visualização geográfica dos interesses dos leads.
+         Conteúdo: mapa interativo + ranking de regiões.
+    ══════════════════════════════════════════════════════════ -->
+    <div class="page" id="page-mapa">
+      <div class="mapa-layout">
+        <div id="leaflet-map"></div>
+        <div class="mapa-sidebar">
+          <div class="ranking-card">
+            <div class="ranking-title">Top Regiões de Interesse</div>
+            <div id="ranking-list"><div class="mapa-empty">Carregando...</div></div>
+          </div>
+          <div class="ranking-card">
+            <div class="ranking-title">Cobertura de Dados</div>
+            <div id="mapa-cobertura"><div class="mapa-empty">Carregando...</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
   </div><!-- /main-content -->
 </main>
 
@@ -745,6 +797,9 @@ let todosLeads        = [];
 let currentUid        = null;
 let listaAtivos       = [];
 let listaFiltroClass  = '';
+let mapaInstance      = null;
+let mapaMarkers       = [];
+let mapaIniciado      = false;
 
 const WA_SVG = `<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>`;
 
@@ -1167,7 +1222,8 @@ document.getElementById('auth-signup-pwd').addEventListener('keydown', e => { if
 const PAGE_TITLES = {
   lembretes:   'Lembretes',
   performance: 'Seus <span style="color:var(--green)">Resultados</span>',
-  vgv:         'Análise de <span style="color:var(--green)">VGV</span>'
+  vgv:         'Análise de <span style="color:var(--green)">VGV</span>',
+  mapa:        'Mapa de <span style="color:var(--green)">Interesse</span>'
 };
 function showPage(page) {
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
@@ -1175,6 +1231,10 @@ function showPage(page) {
   document.getElementById('page-' + page).classList.add('active');
   document.getElementById('nav-' + page).classList.add('active');
   document.getElementById('page-title').innerHTML = PAGE_TITLES[page] || page;
+  if (page === 'mapa') {
+    if (!mapaIniciado) inicializarMapa();
+    else setTimeout(() => mapaInstance && mapaInstance.invalidateSize(), 50);
+  }
 }
 
 // ── Utilitários ──────────────────────────────────────────────
@@ -1274,6 +1334,14 @@ function abrirWhatsApp(tel) {
   window.open(url, '_whatsapp');
 }
 
+function formatarLocalizacao(loc) {
+  try {
+    const arr = JSON.parse(loc);
+    if (Array.isArray(arr)) return arr.map(c => c.label).join(' · ');
+  } catch(e) {}
+  return loc;
+}
+
 // ── Renderização de linha de lead ────────────────────────────
 function renderLeadRow(l, lista) {
   const refContato = l.ultimo_contato || l.criado_em;
@@ -1298,7 +1366,7 @@ function renderLeadRow(l, lista) {
   const detalhes = [
     l.status_negociacao ? { label: 'Status', value: statusLabel[l.status_negociacao] || l.status_negociacao } : null,
     ticketFmt           ? { label: 'Ticket', value: ticketFmt } : null,
-    l.localizacao       ? { label: 'Localização', value: l.localizacao } : null,
+    l.localizacao       ? { label: 'Localização', value: formatarLocalizacao(l.localizacao) } : null,
     l.momento_compra    ? { label: 'Momento', value: momentoLabel[l.momento_compra] || l.momento_compra } : null,
   ].filter(Boolean);
 
@@ -1866,6 +1934,118 @@ window.matchMedia('(prefers-color-scheme: light)').addEventListener('change', ()
   }
 });
 
+// ── Mapa ─────────────────────────────────────────────────────
+function inicializarMapa() {
+  if (mapaIniciado) return;
+  mapaIniciado = true;
+  mapaInstance = L.map('leaflet-map', { center: [-23.55, -46.63], zoom: 11 });
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '© <a href="https://openstreetmap.org">OpenStreetMap</a>',
+    maxZoom: 19
+  }).addTo(mapaInstance);
+  if (todosLeads.length > 0) renderMapa(todosLeads);
+  setTimeout(() => mapaInstance.invalidateSize(), 100);
+}
+
+function renderMapa(leads) {
+  if (!mapaInstance) return;
+  mapaMarkers.forEach(m => m.remove());
+  mapaMarkers = [];
+
+  const COR = { quente: '#FF4D4D', morno: '#FF9500', frio: '#4D9EFF' };
+  const LABEL = { quente: 'Quente', morno: 'Morno', frio: 'Frio' };
+  const bounds = [];
+
+  leads.forEach(lead => {
+    if (!lead.localizacao) return;
+    let chips = [];
+    try {
+      const p = JSON.parse(lead.localizacao);
+      chips = Array.isArray(p) ? p : [];
+    } catch(e) { return; }
+
+    chips.forEach(chip => {
+      if (!chip.lat || !chip.lng) return;
+      const cor = COR[lead.classificacao] || 'rgba(200,200,200,0.7)';
+      const marker = L.circleMarker([chip.lat, chip.lng], {
+        radius: 8, fillColor: cor, color: 'rgba(255,255,255,0.35)',
+        weight: 1.5, fillOpacity: 0.88
+      });
+      const tempLabel  = LABEL[lead.classificacao] || 'Sem class.';
+      const tempCor    = COR[lead.classificacao] || '#aaa';
+      const ticketStr  = lead.ticket ? 'R$ ' + Number(lead.ticket).toLocaleString('pt-BR') : null;
+      marker.bindPopup(`
+        <div class="popup-nome">${lead.nome}</div>
+        <div class="popup-loc">📍 ${chip.label}</div>
+        <span class="popup-tag" style="background:${tempCor}22;color:${tempCor};border:1px solid ${tempCor}44">${tempLabel}</span>
+        ${ticketStr ? `<div class="popup-ticket">${ticketStr}</div>` : ''}
+      `, { maxWidth: 210 });
+      marker.addTo(mapaInstance);
+      mapaMarkers.push(marker);
+      bounds.push([chip.lat, chip.lng]);
+    });
+  });
+
+  if (bounds.length > 0) mapaInstance.fitBounds(bounds, { padding: [40, 40], maxZoom: 13 });
+  renderRankingMapa(leads);
+}
+
+function renderRankingMapa(leads) {
+  const regioes = {};
+  let comLoc = 0, semLoc = 0;
+
+  leads.forEach(lead => {
+    let chips = [];
+    if (lead.localizacao) {
+      try {
+        const p = JSON.parse(lead.localizacao);
+        if (Array.isArray(p) && p.length > 0) { chips = p; comLoc++; } else semLoc++;
+      } catch(e) { semLoc++; }
+    } else { semLoc++; }
+
+    chips.forEach(chip => {
+      if (!chip.label) return;
+      if (!regioes[chip.label]) regioes[chip.label] = { q: 0, m: 0, f: 0, s: 0, total: 0 };
+      regioes[chip.label].total++;
+      if      (lead.classificacao === 'quente') regioes[chip.label].q++;
+      else if (lead.classificacao === 'morno')  regioes[chip.label].m++;
+      else if (lead.classificacao === 'frio')   regioes[chip.label].f++;
+      else                                       regioes[chip.label].s++;
+    });
+  });
+
+  const sorted = Object.entries(regioes).sort((a, b) => b[1].total - a[1].total).slice(0, 10);
+  const listEl = document.getElementById('ranking-list');
+
+  if (sorted.length === 0) {
+    listEl.innerHTML = `<div class="mapa-empty">Nenhum lead com localização cadastrada ainda.<br>Adicione via campo de busca no WhatsApp.</div>`;
+  } else {
+    listEl.innerHTML = sorted.map(([label, d], i) => {
+      const dots = [
+        ...Array(Math.min(d.q, 3)).fill('<span class="dot q"></span>'),
+        ...Array(Math.min(d.m, 3)).fill('<span class="dot m"></span>'),
+        ...Array(Math.min(d.f, 3)).fill('<span class="dot f"></span>')
+      ].join('');
+      return `<div class="ranking-row">
+        <span class="ranking-pos">${i + 1}</span>
+        <span class="ranking-name" title="${label}">${label}</span>
+        <span class="ranking-temps">${dots}</span>
+        <span class="ranking-count">${d.total}</span>
+      </div>`;
+    }).join('');
+  }
+
+  const total = leads.length;
+  const pct   = total > 0 ? Math.round(comLoc / total * 100) : 0;
+  const pctCor = pct >= 60 ? 'var(--green)' : pct >= 30 ? 'var(--morno)' : 'var(--quente)';
+  document.getElementById('mapa-cobertura').innerHTML = `
+    <div class="cobertura-row"><span>Com localização</span><span class="cobertura-val">${comLoc}</span></div>
+    <div class="cobertura-row"><span>Sem localização</span><span class="cobertura-val" style="color:var(--muted)">${semLoc}</span></div>
+    <div class="cobertura-row"><span>Cobertura</span><span class="cobertura-val" style="color:${pctCor}">${pct}%</span></div>
+    <div class="cobertura-track"><div class="cobertura-fill" style="width:${pct}%"></div></div>
+  `;
+}
+
 // ── Filtro de período ────────────────────────────────────────
 function setPeriodo(dias, btn) {
   periodoDias = dias;
@@ -1882,6 +2062,7 @@ async function carregarDados() {
   try {
     todosLeads = await fetchLeads(currentUid, dashJwt);
     renderDados(todosLeads);
+    if (mapaIniciado) renderMapa(todosLeads);
     document.getElementById('sub-texto').textContent =
       `${todosLeads.length} leads · atualizado às ${new Date().toLocaleTimeString('pt-BR')}`;
     document.getElementById('status-text').textContent = 'Conectado';

@@ -75,7 +75,7 @@ function renderLeadRow(l, lista) {
   const detalhes = [
     l.status_negociacao ? { label: 'Status',      value: statusLabel[l.status_negociacao]  || l.status_negociacao } : null,
     ticketFmt           ? { label: 'Ticket',      value: ticketFmt } : null,
-    l.localizacao       ? { label: 'Localização', value: l.localizacao } : null,
+    l.localizacao       ? { label: 'Localização', value: (() => { try { const a = JSON.parse(l.localizacao); return Array.isArray(a) ? a.map(c => c.label).join(' · ') : l.localizacao; } catch(e) { return l.localizacao; } })() } : null,
     l.momento_compra    ? { label: 'Momento',     value: momentoLabel[l.momento_compra]    || l.momento_compra } : null,
   ].filter(Boolean);
 

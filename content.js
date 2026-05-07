@@ -347,6 +347,52 @@ style.textContent = `
   cursor: pointer; font-family: Arial, sans-serif;
 }
 .qual-save:hover { background: #5ab84c; }
+.loc-wrapper { position: relative; }
+.loc-chips { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 5px; min-height: 0; }
+.loc-chip {
+  display: inline-flex; align-items: center; gap: 3px;
+  background: rgba(105,205,90,0.12); border: 1px solid rgba(105,205,90,0.35);
+  border-radius: 10px; padding: 2px 6px 2px 7px; font-size: 11px; color: var(--org-text);
+  max-width: 230px;
+}
+.loc-chip > span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.loc-chip-remove {
+  background: none; border: none; cursor: pointer; color: var(--org-muted);
+  font-size: 10px; padding: 0 0 0 2px; line-height: 1; flex-shrink: 0;
+}
+.loc-chip-remove:hover { color: var(--org-text); }
+.loc-search-row {
+  display: flex; align-items: center; gap: 6px;
+  background: var(--org-bg-deep); border: 1px solid var(--org-border-faint);
+  border-radius: 6px; padding: 6px 10px;
+}
+.loc-search-row:focus-within { border-color: rgba(105,205,90,0.5); }
+.loc-icon { font-size: 11px; flex-shrink: 0; color: var(--org-muted); }
+.loc-input {
+  flex: 1; background: transparent; border: none; outline: none;
+  font-size: 12px; color: var(--org-text); font-family: Arial, sans-serif;
+}
+.loc-input::placeholder { color: var(--org-muted); }
+.loc-spinner {
+  font-size: 11px; color: var(--org-muted); display: none;
+  animation: loc-spin 0.8s linear infinite;
+}
+@keyframes loc-spin { to { transform: rotate(360deg); } }
+.loc-dropdown {
+  position: absolute; left: 0; right: 0; top: calc(100% + 3px);
+  background: var(--org-bg); border: 1px solid var(--org-border);
+  border-radius: 8px; box-shadow: 0 4px 20px var(--org-shadow);
+  z-index: 9999999; overflow: hidden; display: none;
+}
+.loc-suggestion {
+  padding: 7px 10px; font-size: 12px; color: var(--org-text);
+  cursor: pointer; border-bottom: 1px solid var(--org-border-faint); line-height: 1.3;
+}
+.loc-suggestion:last-child { border-bottom: none; }
+.loc-suggestion:hover { background: var(--org-bg-deep); }
+.loc-sug-main { font-weight: 600; }
+.loc-sug-sub { font-size: 10px; color: var(--org-muted); margin-top: 1px; }
+.loc-empty { padding: 10px; font-size: 12px; color: var(--org-muted); text-align: center; }
 `;
 try { document.head.appendChild(style); } catch(e) {}
 
@@ -1228,6 +1274,135 @@ function fecharPainelQualificacao() {
   }
 }
 
+function inicializarLocalizacaoSearch(panel, localizacaoAtual) {
+  const ESTADOS = {
+    'São Paulo':'SP','Rio de Janeiro':'RJ','Minas Gerais':'MG','Bahia':'BA',
+    'Paraná':'PR','Rio Grande do Sul':'RS','Pernambuco':'PE','Ceará':'CE',
+    'Pará':'PA','Maranhão':'MA','Santa Catarina':'SC','Goiás':'GO',
+    'Amazonas':'AM','Espírito Santo':'ES','Mato Grosso':'MT','Mato Grosso do Sul':'MS',
+    'Rio Grande do Norte':'RN','Alagoas':'AL','Piauí':'PI','Sergipe':'SE',
+    'Rondônia':'RO','Tocantins':'TO','Acre':'AC','Amapá':'AP','Roraima':'RR',
+    'Paraíba':'PB','Distrito Federal':'DF'
+  };
+
+  let chips = [];
+  if (localizacaoAtual) {
+    try {
+      const parsed = JSON.parse(localizacaoAtual);
+      chips = Array.isArray(parsed) ? parsed : [{ label: localizacaoAtual, lat: null, lng: null }];
+    } catch(e) {
+      chips = [{ label: localizacaoAtual, lat: null, lng: null }];
+    }
+  }
+
+  const chipsEl   = panel.querySelector('#loc-chips');
+  const inputEl   = panel.querySelector('#loc-search');
+  const dropEl    = panel.querySelector('#loc-dropdown');
+  const spinnerEl = panel.querySelector('#loc-spinner');
+  let debounceTimer = null;
+
+  function renderChips() {
+    chipsEl.innerHTML = chips.map((c, i) => `
+      <div class="loc-chip">
+        <span title="${c.label}">📍 ${c.label}</span>
+        <button class="loc-chip-remove" data-idx="${i}" title="Remover">✕</button>
+      </div>
+    `).join('');
+    chipsEl.querySelectorAll('.loc-chip-remove').forEach(btn => {
+      btn.addEventListener('click', e => {
+        e.stopPropagation();
+        chips.splice(parseInt(btn.dataset.idx), 1);
+        renderChips();
+      });
+    });
+  }
+
+  function closeDropdown() {
+    dropEl.style.display = 'none';
+    dropEl.innerHTML = '';
+  }
+
+  function formatLabel(item) {
+    const a = item.address || {};
+    const rua    = a.road || '';
+    const numero = a.house_number || '';
+    const bairro = a.suburb || a.quarter || a.neighbourhood || a.village || '';
+    const cidade = a.city || a.town || a.municipality || '';
+    const estado = ESTADOS[a.state] || '';
+    const sufixo = cidade ? `, ${cidade}${estado ? ' - ' + estado : ''}` : '';
+    if (rua && numero && bairro) return `${rua}, ${numero} - ${bairro}${sufixo}`;
+    if (rua && numero)           return `${rua}, ${numero}${sufixo}`;
+    if (rua && bairro)           return `${rua}, ${bairro}${sufixo}`;
+    if (rua)                     return `${rua}${sufixo}`;
+    if (bairro && cidade)        return `${bairro}${sufixo}`;
+    if (cidade)                  return `${cidade}${estado ? ' - ' + estado : ''}`;
+    return item.display_name.split(',').slice(0, 2).join(',').trim();
+  }
+
+  function formatSub(item) {
+    const a = item.address || {};
+    const rua    = a.road || '';
+    const bairro = a.suburb || a.quarter || a.neighbourhood || '';
+    const cidade = a.city || a.town || '';
+    const parts  = [];
+    if (rua && bairro) parts.push(bairro);
+    if (cidade && (rua || bairro)) parts.push(cidade);
+    if (a.state) parts.push(ESTADOS[a.state] || a.state);
+    return parts.join(' · ');
+  }
+
+  async function buscarLocalizacoes(query) {
+    spinnerEl.style.display = 'inline';
+    try {
+      const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=6&countrycodes=br&addressdetails=1`;
+      const res = await fetch(url, { headers: { 'Accept-Language': 'pt-BR,pt;q=0.9' } });
+      return await res.json();
+    } catch(e) { return []; }
+    finally { spinnerEl.style.display = 'none'; }
+  }
+
+  async function handleInput() {
+    const q = inputEl.value.trim();
+    if (q.length < 3) { closeDropdown(); return; }
+    const results = await buscarLocalizacoes(q);
+    if (!results.length) {
+      dropEl.innerHTML = '<div class="loc-empty">Nenhum resultado encontrado</div>';
+      dropEl.style.display = 'block';
+      return;
+    }
+    dropEl.innerHTML = results.map((r, i) => {
+      const main = formatLabel(r);
+      const sub  = formatSub(r);
+      return `<div class="loc-suggestion" data-idx="${i}">
+        <div class="loc-sug-main">${main}</div>
+        ${sub ? `<div class="loc-sug-sub">${sub}</div>` : ''}
+      </div>`;
+    }).join('');
+    dropEl.style.display = 'block';
+    dropEl.querySelectorAll('.loc-suggestion').forEach((el, i) => {
+      el.addEventListener('mousedown', e => {
+        e.preventDefault();
+        const label = formatLabel(results[i]);
+        if (!chips.some(c => c.label === label)) {
+          chips.push({ label, lat: parseFloat(results[i].lat), lng: parseFloat(results[i].lon) });
+          renderChips();
+        }
+        inputEl.value = '';
+        closeDropdown();
+      });
+    });
+  }
+
+  inputEl.addEventListener('input', () => {
+    clearTimeout(debounceTimer);
+    debounceTimer = setTimeout(handleInput, 400);
+  });
+  inputEl.addEventListener('blur', () => setTimeout(closeDropdown, 160));
+
+  renderChips();
+  panel._getLocalizacao = () => chips.length > 0 ? JSON.stringify(chips) : null;
+}
+
 function abrirPainelQualificacao(nome, btn) {
   fecharPainelQualificacao();
   fecharMiniMenu();
@@ -1259,7 +1434,15 @@ function abrirPainelQualificacao(nome, btn) {
       </div>
       <div>
         <span class="qual-label">Localização de interesse</span>
-        <input class="qual-input" id="qual-local" type="text" placeholder="Ex: Pinheiros, Moema..." value="${q.localizacao || ''}">
+        <div class="loc-wrapper">
+          <div class="loc-chips" id="loc-chips"></div>
+          <div class="loc-search-row">
+            <span class="loc-icon">⊕</span>
+            <input class="loc-input" id="loc-search" type="text" placeholder="Buscar bairro ou cidade...">
+            <span class="loc-spinner" id="loc-spinner">⟳</span>
+          </div>
+          <div class="loc-dropdown" id="loc-dropdown"></div>
+        </div>
       </div>
       <div>
         <span class="qual-label">Momento de compra</span>
@@ -1279,6 +1462,8 @@ function abrirPainelQualificacao(nome, btn) {
     </div>
   `;
 
+  inicializarLocalizacaoSearch(panel, q.localizacao || null);
+
   // Formata ticket enquanto digita
   panel.querySelector('#qual-ticket').addEventListener('input', function() {
     const nums = this.value.replace(/\D/g, '');
@@ -1290,7 +1475,7 @@ function abrirPainelQualificacao(nome, btn) {
   panel.querySelector('.qual-save').addEventListener('click', () => {
     const status     = panel.querySelector('input[name="qual-status"]:checked')?.value   || null;
     const ticket     = (() => { const n = panel.querySelector('#qual-ticket').value.replace(/\D/g,''); return n ? parseInt(n, 10) : null; })();
-    const localizacao = panel.querySelector('#qual-local').value.trim() || null;
+    const localizacao = panel._getLocalizacao ? panel._getLocalizacao() : null;
     const momento    = panel.querySelector('input[name="qual-momento"]:checked')?.value  || null;
     const observacoes = panel.querySelector('#qual-obs').value.trim() || null;
 

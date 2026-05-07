@@ -10,7 +10,8 @@
   ],
   "host_permissions": [
     "https://tkxvbuzykfnoxiyeoams.supabase.co/*",
-    "https://web.whatsapp.com/*"
+    "https://web.whatsapp.com/*",
+    "https://nominatim.openstreetmap.org/*"
   ],
   "externally_connectable": {
     "matches": [
