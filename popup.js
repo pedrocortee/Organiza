@@ -146,7 +146,7 @@ document.getElementById('btn-login').addEventListener('click', async () => {
 
 // ── Navigation ───────────────────────────────────────────────
 document.getElementById('btn-assinar').addEventListener('click', () => {
-  chrome.tabs.create({ url: 'https://splendid-fox-f0ee35.netlify.app' });
+  chrome.tabs.create({ url: 'https://useorganiza.com.br/' });
   window.close();
 });
 document.getElementById('btn-goto-forgot').addEventListener('click', () => {

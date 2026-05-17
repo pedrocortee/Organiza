@@ -79,7 +79,7 @@ function telefoneValido(tel, userId) {
 
 // Listener para mensagens EXTERNAS (vindas do GitHub Pages / Netlify)
 chrome.runtime.onMessageExternal.addListener((msg, sender, sendResponse) => {
-  const allowedOrigins = ['https://pedrocortee.github.io', 'https://splendid-fox-f0ee35.netlify.app'];
+  const allowedOrigins = ['http://painel.useorganiza.com.br', 'https://useorganiza.com.br'];
   if (!allowedOrigins.includes(sender.origin)) return;
 
   if (msg.type === 'OPEN_WHATSAPP') {
@@ -123,7 +123,7 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   }
 
   if (msg.type === 'OPEN_DASHBOARD') {
-    chrome.tabs.create({ url: `https://pedrocortee.github.io/Organiza/?ext_id=${chrome.runtime.id}` });
+    chrome.tabs.create({ url: `http://painel.useorganiza.com.br/?ext_id=${chrome.runtime.id}` });
     return true;
   }
 
@@ -311,7 +311,7 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     fetch(`${SUPABASE_URL}/auth/v1/recover`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_KEY },
-      body: JSON.stringify({ email, redirect_to: `https://pedrocortee.github.io/Organiza/?ext_id=${extensionId}` })
+      body: JSON.stringify({ email, redirect_to: `http://painel.useorganiza.com.br/?ext_id=${extensionId}` })
     })
     .then(r => sendResponse({ ok: r.ok }))
     .catch(e => sendResponse({ ok: false, error: e.message }));

@@ -1174,7 +1174,7 @@ document.getElementById('btn-auth-forgot-send').addEventListener('click', async 
     const r = await fetch(`${SUPABASE_URL_DASH}/auth/v1/recover`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_KEY_DASH },
-      body: JSON.stringify({ email, redirect_to: 'https://pedrocortee.github.io/Organiza/' })
+      body: JSON.stringify({ email, redirect_to: 'http://painel.useorganiza.com.br/' })
     });
     if (!r.ok) { const d = await r.json(); throw new Error(d.error_description || 'Erro ao enviar email.'); }
     sucEl.textContent = '✓ Link enviado! Verifique seu email e clique no link para redefinir a senha.';
